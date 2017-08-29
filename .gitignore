@@ -1,0 +1,9 @@
+.snakemake/
+fastq/*
+logs/*
+logs/cluster/*
+
+!fastq/.gitkeep
+!logs/.gitkeep
+!logs/cluster/
+!logs/cluster/.gitkeep
