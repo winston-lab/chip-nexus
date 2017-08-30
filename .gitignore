@@ -1,7 +1,12 @@
 .snakemake/
+alignment/
+coverage/
+qual_ctrl/
 fastq/*
 logs/*
 logs/cluster/*
+snakemake.err
+snakemake.log
 
 !fastq/.gitkeep
 !logs/.gitkeep

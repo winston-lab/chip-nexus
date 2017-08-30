@@ -13,23 +13,25 @@ genome:
     orf-annotation: ../genome/annotations/Scer_nondubious_ORFs.bed
     transcripts: ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
 
+factor: "tfiib" #name of the factor being ChIP'ed (for file-naming purposes only)
+
 samples:
-    Dia-1:
+    diamide-1:
         fastq : fastq/Dia_1_TTAGGC.R1.fastq.gz
         group : "diamide"
         pass-qc : pass
         spikein : y
-    Dia-2:
+    diamide-2:
         fastq : fastq/Dia_2_TGACCA.R1.fastq.gz
         group : "diamide"
         pass-qc : pass
         spikein : y
-    Nit-1:
+    nitrogen-1:
         fastq : fastq/Nit_1_CTGATC.R1.fastq.gz
         group : "nitrogen"
         pass-qc : pass
         spikein : y
-    Nit-2:
+    nitrogen-2:
         fastq : fastq/Nit_2_AAGCTA.R1.fastq.gz
         group : "nitrogen"
         pass-qc : pass
@@ -54,22 +56,22 @@ samples:
         group : "SD"
         pass-qc : pass
         spikein : y
-    spt6-1:
+    spt6-37-1:
         fastq : fastq/spt6A_S3_L001_R1_001.fastq.gz
         group : "spt6-37"
         pass-qc : pass
         spikein : y
-    spt6-2:
+    spt6-37-2:
         fastq : fastq/spt6B_S4_L001_R1_001.fastq.gz
         group : "spt6-37"
         pass-qc : pass
         spikein : y
-    wt-1:
+    WT-37-1:
         fastq : fastq/WTA_S1_L001_R1_001.fastq.gz
         group : "WT-37"
         pass-qc : pass
         spikein : y
-    wt-2:
+    WT-37-2:
         fastq : fastq/WTB_S2_L001_R1_001.fastq.gz
         group : "WT-37"
         pass-qc : pass
@@ -112,25 +114,10 @@ comparisons:
 
 cutadapt:
     #trim_qual : 25
-    adapter : AGATCGGAAGAGCACAC
+    adapter: "AGATCGGAAGAGCACAC"
 
-tophat2:
-    read-mismatches : 3 
-    read-gap-length : 2
-    read-edit-dist : 3
-    min-anchor-length : 8
-    splice-mismatches : 1
-    min-intron-length : 20
-    max-intron-length : 5000
-    max-insertion-length : 3
-    max-deletion-length : 3
-    max-multihits : 100
-    segment-mismatches : 3
-    segment-length : 20
-    min-coverage-intron : 50
-    max-coverage-intron : 10000
-    min-segment-intron : 50
-    max-segment-intron : 500000
+bowtie2:
+    minmapq : 5
 
 threads: 2
 
