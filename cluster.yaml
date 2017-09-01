@@ -43,22 +43,23 @@ get_coverage:
     time : "1:00"
     mem : 2000
 
-# normalize:
-#     time : "1:00"
-#     mem : 2000
+deseq_initial_qc:
+    time : "11:59"
+    mem : 40000
+
+normalize:
+    time : "1:00"
+    mem : 2000
  
-# deeptools_matrix:
-#     time : "1:00"
-#     n : 1
-#     mem : 2000
+deeptools_matrix:
+    time : "1:00"
+    n : 1
+    mem : 2000
 
-# r_datavis:
-#     time : "4:00"
-#     mem : 60000
+r_datavis:
+    time : "4:00"
+    mem : 60000
 
-# deseq_initial_qc:
-#     time : "11:59"
-#     mem : 40000
 
 # deseq_passing_qc:
 #     time : "11:59"

@@ -1,8 +1,12 @@
+dag.svg
+Rplots.pdf
 .snakemake/
 alignment/
 coverage/
+datavis/
 qual_ctrl/
 fastq/*
+scripts/.snakemake*
 logs/*
 logs/cluster/*
 snakemake.err

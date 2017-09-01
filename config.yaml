@@ -10,6 +10,7 @@ combinedgenome :
 genome:
     fasta : ../genome/S_cerevisiae.R64-2-1.fa
     chrsizes : ../genome/S_cerevisiae.R64-2-1.chrsizes.tsv
+    si-chrsizes: ../genome/S_pombe.ASM294v2.chrsizes.tsv
     orf-annotation: ../genome/annotations/Scer_nondubious_ORFs.bed
     transcripts: ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
 
@@ -119,22 +120,24 @@ cutadapt:
 bowtie2:
     minmapq : 5
 
+corr-windowsize: 100
+
 threads: 2
 
-# annotations:
-#     allPolII-TSS:
-#         path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
-#         binsize : 10 
-#         binstat : "max" # OPTIONS: mean, median, min, max, sum, std
-#         refpoint : "TSS" # OPTIONS: TSS, TES , center
-#         upstream : 500
-#         dnstream : 4000
-#         sort : "ascend" # OPTIONS: descend, ascend, no, keep
-#         sortby : "region_length"
-#         pct_cutoff : .998 # do not plot data above this percentile in heatmaps
-#         heatmap_colormap : "viridis"  # OPTIONS: viridis, inferno, magma, plasma
-#         refpointlabel : "TSS" # label for reference point
-#         ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+annotations:
+    allPolII-TSS:
+        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+        binsize : 10 
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 500
+        dnstream : 4000
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .98 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TSS" # label for reference point
+        ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
 
 # #minimum reads PER SAMPLE for prefiltering
 # minreads: 2
