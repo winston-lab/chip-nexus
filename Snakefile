@@ -17,6 +17,7 @@ conditiongroups_si = config["comparisons"]["spikenorm"]["conditions"]
 # CATEGORIES = ["genic", "intragenic", "intergenic", "antisense", "convergent", "divergent"]
 
 localrules: all,
+            make_stranded_annotations,
             join_window_counts,
             bedgraph_to_bigwig,
             gzip_deeptools_table,
@@ -32,11 +33,14 @@ rule all:
         #coverage
         expand("coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-minus.bedgraph", sample=SAMPLES, factor = config["factor"]),
         # expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-STRANDED.bedgraph",sample=SAMPLES, factor = config["factor"], norm=["counts"])
-        expand("coverage/counts/{sample}-{factor}-windowcounts.bedgraph", sample=SAMPLES, factor = config["factor"]),
+        # expand("coverage/counts/{sample}-{factor}-windowcounts.bedgraph", sample=SAMPLES, factor = config["factor"]),
         # "coverage/counts/union-bedgraph-tfiib-chipnexus-allwindowcounts.tsv",
-        "qual_ctrl/all/all-pca-scree-libsizenorm.png",
-        # expand("coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-COMBINED.bw", norm=["libsizenorm", "spikenorm"], sample=SAMPLES, factor=config["factor"])
-        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"])
+        #initial QC
+        # "qual_ctrl/all/all-pca-scree-libsizenorm.png",
+        #datavis
+        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
+        # expand("datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz", annotation = config["annotations"], norm = ["libsizenorm","spikenorm"], factor = config["factor"], strand=["plus","minus"])
+        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"])
 
 rule fastqc_raw:
     input:
@@ -192,13 +196,18 @@ rule make_stranded_bedgraph:
         plus = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-plus.bedgraph",
         minus = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-minus.bedgraph"
     output:
-        sense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-STRANDED.bedgraph",
+        sense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-SENSE.bedgraph",
+        antisense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bedgraph"
     log : "logs/make_stranded_bedgraph/make_stranded_bedgraph-{sample}-{norm}.log"
     shell: """
         (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.plus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp) &> {log}
         (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-minus", $2, $3, $4}}' {input.minus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp) &>> {log}
         (cat coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp | LC_COLLATE=C sort -k1,1 -k2,2n > {output.sense}) &>> {log}
         (rm coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-*.tmp) &>> {log}
+        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.minus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp) &>> {log}
+        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-minus", $2, $3, $4}}' {input.plus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp) &>> {log}
+        (cat coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp | LC_COLLATE=C sort -k1,1 -k2,2n > {output.antisense}) &>> {log}
+        rm coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-*.tmp
         """
 
 rule make_stranded_sicounts_bedgraph:
@@ -206,7 +215,7 @@ rule make_stranded_sicounts_bedgraph:
         plus = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plus.bedgraph",
         minus = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-minus.bedgraph"
     output:
-        sense = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-STRANDED.bedgraph"
+        sense = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-SENSE.bedgraph"
     log: "logs/make_stranded_sicounts_bedgraph/make_stranded_sicounts_bedgraph-{sample}.log"
     shell: """
         (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.plus} > coverage/counts/spikein/{wildcards.sample}-counts-plus.tmp) &> {log}
@@ -215,10 +224,20 @@ rule make_stranded_sicounts_bedgraph:
         (rm coverage/counts/spikein/{wildcards.sample}-counts-*.tmp) &>> {log}
         """
 
+rule make_stranded_annotations:
+    input:
+        lambda wildcards : config["annotations"][wildcards.annotation]["path"]
+    output:
+        "../genome/annotations/stranded/{annotation}-STRANDED.bed"
+    log : "logs/make_stranded_annotations/make_stranded_annotations-{annotation}.log"
+    shell: """
+        (awk 'BEGIN{{FS=OFS="\t"}}$6=="+"{{print $1"-plus", $2, $3, $4, $5, $6}} $6=="-"{{print $1"-minus", $2, $3, $4, $5, $6}}' {input} > {output}) &> {log}
+        """
+
 rule map_counts_to_windows:
     input:
         bg = "coverage/counts/{sample}-{factor}-chipnexus-counts-STRANDED.bedgraph",
-        si_bg = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-STRANDED.bedgraph",
+        si_bg = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-SENSE.bedgraph",
         chrsizes = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
         si_chrsizes = os.path.splitext(config["genome"]["si-chrsizes"])[0] + "-STRANDED.tsv"
     output:
@@ -295,6 +314,7 @@ rule make_combined_bedgraph:
 rule bedgraph_to_bigwig:
     input:
         bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-COMBINED.bedgraph",
+        # bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
         chrsizes = config["genome"]["chrsizes"]
     output:
         "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-COMBINED.bw"
@@ -302,13 +322,27 @@ rule bedgraph_to_bigwig:
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
 
+rule bedgraph_to_bigwig_stranded:
+    input:
+        # bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-COMBINED.bedgraph",
+        sense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-SENSE.bedgraph",
+        antisense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bedgraph",
+        chrsizes = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
+    output:
+        sense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-SENSE.bw",
+        antisense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bw"
+    shell: """
+        bedGraphToBigWig {input.sense} {input.chrsizes} {output.sense}
+        bedGraphToBigWig {input.antisense} {input.chrsizes} {output.antisense}
+        """
+
 rule deeptools_matrix:
     input:
         annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"],
         bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-COMBINED.bw"
     output:
-        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}.mat.gz"),
-        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}.tsv")
+        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-COMBINED.mat.gz"),
+        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-COMBINED.tsv")
     params:
         refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
         upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
@@ -323,20 +357,45 @@ rule deeptools_matrix:
         (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}
         """
 
+rule deeptools_matrix_stranded:
+    input:
+        annotation = "../genome/annotations/stranded/{annotation}-STRANDED.bed",
+        sense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-SENSE.bw",
+        antisense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bw"
+    output:
+        dtfile_sense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-SENSE.mat.gz"),
+        matrix_sense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-SENSE.tsv"),
+        dtfile_antisense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-ANTISENSE.mat.gz"),
+        matrix_antisense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-ANTISENSE.tsv")
+    params:
+        refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
+        upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
+        dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"],
+        binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
+        sort = lambda wildcards: config["annotations"][wildcards.annotation]["sort"],
+        sortusing = lambda wildcards: config["annotations"][wildcards.annotation]["sortby"],
+        binstat = lambda wildcards: config["annotations"][wildcards.annotation]["binstat"]
+    threads : config["threads"]
+    log: "logs/deeptools/computeMatrix-{annotation}-{sample}-{factor}-{norm}.log"
+    shell: """
+        (computeMatrix reference-point -R {input.annotation} -S {input.sense} --referencePoint {params.refpoint} -out {output.dtfile_sense} --outFileNameMatrix {output.matrix_sense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}
+        (computeMatrix reference-point -R {input.annotation} -S {input.antisense} --referencePoint {params.refpoint} -out {output.dtfile_antisense} --outFileNameMatrix {output.matrix_antisense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}
+        """
+
 rule gzip_deeptools_table:
     input:
-        tsv = "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}.tsv"
+        tsv = "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.tsv"
     output:
-        "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}.tsv.gz"
+        "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
     shell: """
         pigz -f {input.tsv}
         """
 
 rule melt_matrix:
     input:
-        matrix = "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}.tsv.gz"
+        matrix = "datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
     output:
-        temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-melted.tsv.gz")
+        temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz")
     params:
         name = lambda wildcards : wildcards.sample,
         group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
@@ -348,16 +407,16 @@ rule melt_matrix:
 
 rule cat_matrices:
     input:
-        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}-{sample}-{{factor}}-chipnexus-{{norm}}-melted.tsv.gz", sample=SAMPLES)
+        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}-{sample}-{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
     output:
-        "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}.tsv.gz"
+        "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
     shell: """
         cat {input} > {output}
         """
 
-rule r_datavis:
+rule r_heatmaps:
     input:
-        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}.tsv.gz"
+        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-COMBINED.tsv.gz"
     output:
         heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bysample.png",
         heatmap_group= "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png",
@@ -373,4 +432,19 @@ rule r_datavis:
     script:
         "scripts/plotHeatmaps.R"
 
+rule r_metagenes:
+    input:
+        plus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-SENSE.tsv.gz",
+        minus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-ANTISENSE.tsv.gz"
+    output:
+        meta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bysample.png",
+        meta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png"
+    params:
+        # upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
+        # dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
+        refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
+        factor = config["factor"],
+        ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
+    script:
+        "scripts/plotNexusMetagene.R"
 

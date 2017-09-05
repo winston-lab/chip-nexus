@@ -23,7 +23,7 @@ plotheatmaps = function(intable, upstream, downstream, pct_cutoff, refptlabel, f
       scale_y_reverse(name=paste(nindices, ylabel))+
       scale_x_continuous(breaks = c(-upstream/1000, 0, downstream/1000), labels=c(-upstream/1000, refptlabel, downstream/1000)) +
       xlab(paste("distance from", refptlabel, "(kb)")) +
-      scale_fill_viridis(option = cmap, na.value="white", name=paste(factor, 'ChIP-Nexus normalized counts)'), guide=guide_colorbar(title.position="top", barwidth=15, barheight=1, title.hjust=0.5)) +
+      scale_fill_viridis(option = cmap, na.value="white", name=paste(factor, 'ChIP-Nexus normalized counts'), guide=guide_colorbar(title.position="top", barwidth=15, barheight=1, title.hjust=0.5)) +
       theme_minimal() +
       theme(strip.text = element_text(size=12, face="bold"),
             legend.position = "top",

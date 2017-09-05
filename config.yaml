@@ -138,6 +138,19 @@ annotations:
         heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         refpointlabel : "TSS" # label for reference point
         ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+    allPolII-TSSzoom:
+        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 300
+        dnstream : 100
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : 1 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TSS" # label for reference point
+        ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
 
 # #minimum reads PER SAMPLE for prefiltering
 # minreads: 2

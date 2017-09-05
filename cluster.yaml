@@ -56,9 +56,13 @@ deeptools_matrix:
     n : 1
     mem : 2000
 
-r_datavis:
+r_heatmaps:
     time : "4:00"
     mem : 60000
+
+r_metagenes:
+    time : "4:00"
+    mem : 30000
 
 
 # deseq_passing_qc:
