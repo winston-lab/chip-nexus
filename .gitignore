@@ -4,6 +4,7 @@ Rplots.pdf
 alignment/
 coverage/
 datavis/
+peakcalling/
 qual_ctrl/
 fastq/*
 scripts/.snakemake*

@@ -2,7 +2,7 @@ library(tidyverse)
 library(forcats)
 library(viridis)
 
-plotheatmaps = function(intable, upstream, downstream, pct_cutoff, refptlabel, factor, ylabel, cmap, samples_out, group_out){
+plotheatmaps = function(intable, upstream, downstream, pct_cutoff, refptlabel, factor, ylabel, figheight, figwidth, cmap, samples_out, group_out){
     raw = read_table2(intable,
     	 col_names=c("group", "sample", "index", "position","cpm"),
     	 col_types=cols(group=col_character(), sample=col_character(), index=col_integer(), position=col_double(), cpm=col_double())) %>% filter(cpm != "NA") 
@@ -12,7 +12,7 @@ plotheatmaps = function(intable, upstream, downstream, pct_cutoff, refptlabel, f
     nindices = max(raw$index)
     nsamples = length(fct_unique(raw$sample))
     ngroups = length(fct_unique(raw$group))
-    w = round((max(raw$position) - min(raw$position))*1000/148)
+    #w = round((max(raw$position) - min(raw$position))*1000/148)
     
     #percentile cutoff for heatmap visualization
     cutoff = quantile(raw$cpm, probs=pct_cutoff, na.rm=TRUE)
@@ -33,11 +33,11 @@ plotheatmaps = function(intable, upstream, downstream, pct_cutoff, refptlabel, f
             axis.title.x = element_text(size=12, face="bold"),
             axis.ticks.length = unit(-2, "mm"))
     
-    heatmap_samples = heatmap_base + facet_wrap(~sample, ncol=(nsamples/ngroups))
-    ggsave(samples_out , plot = heatmap_samples, height=10+round((nindices/1000)*(ngroups)), width = 10+.3*w*(nsamples/ngroups), units = "cm")
+    heatmap_samples = heatmap_base + facet_wrap(~sample, dir="v",  ncol=ngroups)
+    ggsave(samples_out , plot = heatmap_samples, height=figheight+.8*(nsamples/ngroups-1), width = figwidth*ngroups, units = "cm")
     rm(heatmap_samples)
     heatmap_groups = heatmap_base + facet_wrap(~group, ncol=ngroups)
-    ggsave(group_out, plot = heatmap_groups, height=10+round(nindices/600), width = 10+.3*w*ngroups, units = "cm")
+    ggsave(group_out, plot = heatmap_groups, height= figheight, width = figwidth*ngroups, units = "cm")
 }
 
 plotheatmaps(intable= snakemake@input[["matrix"]],
@@ -47,6 +47,8 @@ plotheatmaps(intable= snakemake@input[["matrix"]],
              refptlabel = snakemake@params[["refpointlabel"]],
              factor = snakemake@params[["factor"]],
              ylabel = snakemake@params[["ylabel"]],
+             figheight = snakemake@params[["heatmap_height"]],
+             figwidth = snakemake@params[["figwidth"]],
              cmap = snakemake@params[["heatmap_cmap"]],
              samples_out = snakemake@output[["heatmap_sample"]],
              group_out = snakemake@output[["heatmap_group"]])

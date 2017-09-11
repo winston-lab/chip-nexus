@@ -45,7 +45,7 @@ get_coverage:
 
 deseq_initial_qc:
     time : "11:59"
-    mem : 40000
+    mem : 60000
 
 normalize:
     time : "1:00"
@@ -62,7 +62,7 @@ r_heatmaps:
 
 r_metagenes:
     time : "4:00"
-    mem : 30000
+    mem : 40000
 
 
 # deseq_passing_qc:

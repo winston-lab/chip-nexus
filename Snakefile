@@ -39,8 +39,9 @@ rule all:
         # "qual_ctrl/all/all-pca-scree-libsizenorm.png",
         #datavis
         expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
-        # expand("datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz", annotation = config["annotations"], norm = ["libsizenorm","spikenorm"], factor = config["factor"], strand=["plus","minus"])
-        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"])
+        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
+        #qnexus
+        expand("peakcalling/{sample}-Q-treatment.bedgraph", sample=SAMPLES)
 
 rule fastqc_raw:
     input:
@@ -136,6 +137,34 @@ rule remove_PCR_duplicates:
         (python scripts/removePCRdupsFromBAM.py {input} {output}) &> {log}
         """
 
+rule qnexus:
+    input:
+        "alignment/{sample}-noPCRdup.bam"
+    output:
+        "peakcalling/{sample}-Q-narrowPeak.bed",
+        "peakcalling/{sample}-Q-qfrag-binding-characteristics.R",
+        "peakcalling/{sample}-Q-qfrag-binding-characteristics.pdf",
+        "peakcalling/{sample}-Q-quality-statistics.tab",
+        "peakcalling/{sample}-Q-runinfo.txt",
+        "peakcalling/{sample}-Q-summit-info.tab",
+        "peakcalling/{sample}-Q-treatment.bedgraph"
+    shell: """
+        ../programs/Q/bin/Q --nexus-mode -t {input} -o peakcalling/{wildcards.sample} -v -wbt
+        sed -i 's/peakcalling\///g' peakcalling/{wildcards.sample}-Q-qfrag-binding-characteristics.R
+        Rscript peakcalling/{wildcards.sample}-Q-qfrag-binding-characteristics.R
+        """
+
+rule get_qfrag_counts:
+    input:
+        "peakcalling/{sample}-Q-treatment.bedgraph"
+    output:
+        "coverage/counts/{sample}-{factor}-chipnexus-qfragcounts.bedgraph"
+    params:
+        exp_prefix = config["combinedgenome"]["experimental_prefix"],
+    shell: """
+        grep {params.exp_prefix} {input} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output}
+        """
+
 rule get_coverage:
     input:
         "alignment/{sample}-noPCRdup.bam"
@@ -164,18 +193,23 @@ rule normalize:
         plus = "coverage/counts/{sample}-{factor}-chipnexus-counts-plus.bedgraph",
         minus = "coverage/counts/{sample}-{factor}-chipnexus-counts-minus.bedgraph",
         plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-plmin.bedgraph",
-        SIplmin = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plmin.bedgraph"
+        SIplmin = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plmin.bedgraph",
+        qfrags = "coverage/counts/{sample}-{factor}-chipnexus-qfragcounts.bedgraph"
     output:
         spikePlus = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-plus.bedgraph",
         spikeMinus = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-minus.bedgraph",
         libnormPlus = "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-plus.bedgraph",
-        libnormMinus = "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-minus.bedgraph"
+        libnormMinus = "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-minus.bedgraph",
+        qfrag_spikenorm = "coverage/spikenorm/{sample}-{factor}-chipnexus-qfrags-spikenorm.bedgraph",
+        qfrag_libnorm= "coverage/libsizenorm/{sample}-{factor}-chipnexus-qfrags-libsizenorm.bedgraph",
     log: "logs/normalize/normalize-{sample}.log"
     shell: """
         (scripts/libsizenorm.awk {input.SIplmin} {input.plus} > {output.spikePlus}) &> {log}
         (scripts/libsizenorm.awk {input.SIplmin} {input.minus} > {output.spikeMinus}) &>> {log}
         (scripts/libsizenorm.awk {input.plmin} {input.plus} > {output.libnormPlus}) &>> {log}
         (scripts/libsizenorm.awk {input.plmin} {input.minus} > {output.libnormMinus}) &>> {log}
+        (scripts/libsizenorm.awk {input.SIplmin} {input.qfrags} > {output.qfrag_spikenorm}) &>> {log}
+        (scripts/libsizenorm.awk {input.plmin} {input.qfrags} > {output.qfrag_libnorm}) &>> {log}
         """
 
 rule make_stranded_genome:
@@ -313,11 +347,12 @@ rule make_combined_bedgraph:
 
 rule bedgraph_to_bigwig:
     input:
-        bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-COMBINED.bedgraph",
+        # bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-COMBINED.bedgraph",
+        bg = "coverage/{norm}/{sample}-{factor}-chipnexus-qfrags-{norm}.bedgraph",
         # bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
         chrsizes = config["genome"]["chrsizes"]
     output:
-        "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-COMBINED.bw"
+        "coverage/{norm}/bw/{sample}-{factor}-chipnexus-qfrags-{norm}.bw"
     shell: """
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
@@ -339,10 +374,10 @@ rule bedgraph_to_bigwig_stranded:
 rule deeptools_matrix:
     input:
         annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"],
-        bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-COMBINED.bw"
+        bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-qfrags-{norm}.bw"
     output:
-        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-COMBINED.mat.gz"),
-        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-COMBINED.tsv")
+        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-QFRAGS.mat.gz"),
+        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-QFRAGS.tsv")
     params:
         refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
         upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
@@ -416,7 +451,7 @@ rule cat_matrices:
 
 rule r_heatmaps:
     input:
-        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-COMBINED.tsv.gz"
+        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-QFRAGS.tsv.gz"
     output:
         heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bysample.png",
         heatmap_group= "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png",
@@ -425,6 +460,8 @@ rule r_heatmaps:
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
         dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
         pct_cutoff = lambda wildcards : config["annotations"][wildcards.annotation]["pct_cutoff"],
+        heatmap_height = lambda wildcards : config["annotations"][wildcards.annotation]["heatmap_height"],
+        figwidth = lambda wildcards : config["annotations"][wildcards.annotation]["figwidth"],
         heatmap_cmap = lambda wildcards : config["annotations"][wildcards.annotation]["heatmap_colormap"],
         refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
         factor = config["factor"],
@@ -440,9 +477,10 @@ rule r_metagenes:
         meta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bysample.png",
         meta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png"
     params:
-        # upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
-        # dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
+        upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
+        dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
         refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
+        figwidth = lambda wildcards : config["annotations"][wildcards.annotation]["figwidth"],
         factor = config["factor"],
         ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
     script:

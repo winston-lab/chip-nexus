@@ -138,6 +138,8 @@ annotations:
         heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         refpointlabel : "TSS" # label for reference point
         ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16 #height in cm
+        figwidth: 5.5 #width PER GROUP in cm
     allPolII-TSSzoom:
         path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
         binsize : 1
@@ -147,10 +149,72 @@ annotations:
         dnstream : 100
         sort : "ascend" # OPTIONS: descend, ascend, no, keep
         sortby : "region_length"
-        pct_cutoff : 1 # do not plot data above this percentile in heatmaps
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
         heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         refpointlabel : "TSS" # label for reference point
         ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16
+        figwidth: 4.5 #width PER GROUP in cm
+    dia-up-intrapeaks:
+        path : ../genome/annotations/diamide-v-YPD-de-clusters-libsizenorm-up-intragenic-genic150dn-slopR600.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 300
+        dnstream : 100
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TSS" # label for reference point
+        ylabel : "diamide-upregulated intragenic TSSs\nwhere genic TSS is uninduced"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16
+        figwidth: 4.5 #width PER GROUP in cm
+    rhee2012raw:
+        path : ../genome/annotations/rhee2012_tata-roman-slopR120.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 30
+        dnstream : 120
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TATA" # label for reference point
+        ylabel : "TATA boxes (directly from Rhee 2012)"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16
+        figwidth: 4.5 #width PER GROUP in cm
+    rhee2012inclwrongstrand:
+        path : ../genome/annotations/rhee2012_inclwrongstrand-slopR120.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 30
+        dnstream : 120
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TATA" # label for reference point
+        ylabel : "TATA boxes (from Rhee 2012, checked for TATA)"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16
+        figwidth: 4.5 #width PER GROUP in cm
+    rhee2012cleaned:
+        path : ../genome/annotations/rhee2012_cleaned-slopR120.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 30
+        dnstream : 120
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TATA" # label for reference point
+        ylabel : "TATA boxes (from Rhee 2012, checked for TATA on correct strand)"      # y-axis label (for regions represented in the BED file)
+        heatmap_height: 16
+        figwidth: 4.5 #width PER GROUP in cm
 
 # #minimum reads PER SAMPLE for prefiltering
 # minreads: 2
