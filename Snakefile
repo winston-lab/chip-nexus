@@ -8,6 +8,7 @@ SAMPLES = config["samples"]
 # name_string = " ".join(SAMPLES)
 PASSING = {k:v for (k,v) in SAMPLES.items() if v["pass-qc"] == "pass"}
 # pass_string = " ".join(PASSING)
+GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
 
 controlgroups = config["comparisons"]["libsizenorm"]["controls"]
 conditiongroups = config["comparisons"]["libsizenorm"]["conditions"]
@@ -21,6 +22,7 @@ localrules: all,
             join_window_counts,
             bedgraph_to_bigwig,
             gzip_deeptools_table,
+            # melt_matrix,
             cat_matrices
 
 rule all:
@@ -38,10 +40,14 @@ rule all:
         #initial QC
         # "qual_ctrl/all/all-pca-scree-libsizenorm.png",
         #datavis
-        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
-        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
+        # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
+        # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
         #qnexus
-        expand("peakcalling/{sample}-Q-treatment.bedgraph", sample=SAMPLES)
+        expand("peakcalling/qnexus/{sample}-{factor}-Q-treatment.bedgraph", sample=SAMPLES, factor=config["factor"]),
+        #macs2
+        expand("peakcalling/macs/{group}_peaks.narrowPeak", group = GROUPS),
+        expand("peakcalling/macs/{group}_peaks-intragenic.narrowPeak", group = GROUPS),
+        "peakcalling/macs/intragenic-peaks-overlap.tsv"
 
 rule fastqc_raw:
     input:
@@ -113,14 +119,12 @@ rule align:
         expand("../genome/bowtie2_indexes/{basename}.rev.{num}.bt2", basename=config["combinedgenome"]["name"], num=[1,2]),
         fastq = "fastq/cleaned/{sample}-clean.fastq.gz"
     output:
-        bam = "alignment/{sample}-unique.bam",
+        bam = temp("alignment/{sample}-unique.bam"),
         aligned_fq = "fastq/aligned/{sample}-aligned.fastq.gz",
         unaligned_fq = "fastq/unaligned/{sample}-unaligned.fastq.gz"
     params:
         outbase = "../genome/bowtie2_indexes/" + config["combinedgenome"]["name"],
         minmapq = config["bowtie2"]["minmapq"]
-    # conda:
-        # "envs/tophat2.yaml"
     threads : config["threads"]
     log: "logs/align/align-{sample}.log"
     shell: """
@@ -141,28 +145,79 @@ rule qnexus:
     input:
         "alignment/{sample}-noPCRdup.bam"
     output:
-        "peakcalling/{sample}-Q-narrowPeak.bed",
-        "peakcalling/{sample}-Q-qfrag-binding-characteristics.R",
-        "peakcalling/{sample}-Q-qfrag-binding-characteristics.pdf",
-        "peakcalling/{sample}-Q-quality-statistics.tab",
-        "peakcalling/{sample}-Q-runinfo.txt",
-        "peakcalling/{sample}-Q-summit-info.tab",
-        "peakcalling/{sample}-Q-treatment.bedgraph"
-    shell: """
-        ../programs/Q/bin/Q --nexus-mode -t {input} -o peakcalling/{wildcards.sample} -v -wbt
-        sed -i 's/peakcalling\///g' peakcalling/{wildcards.sample}-Q-qfrag-binding-characteristics.R
-        Rscript peakcalling/{wildcards.sample}-Q-qfrag-binding-characteristics.R
-        """
-
-rule get_qfrag_counts:
-    input:
-        "peakcalling/{sample}-Q-treatment.bedgraph"
-    output:
-        "coverage/counts/{sample}-{factor}-chipnexus-qfragcounts.bedgraph"
+        "peakcalling/qnexus/{sample}-{factor}-Q-narrowPeak.bed",
+        "peakcalling/qnexus/{sample}-{factor}-Q-qfrag-binding-characteristics.R",
+        "peakcalling/qnexus/{sample}-{factor}-Q-qfrag-binding-characteristics.pdf",
+        "peakcalling/qnexus/{sample}-{factor}-Q-quality-statistics.tab",
+        "peakcalling/qnexus/{sample}-{factor}-Q-runinfo.txt",
+        "peakcalling/qnexus/{sample}-{factor}-Q-summit-info.tab",
+        "peakcalling/qnexus/{sample}-{factor}-Q-treatment.bedgraph",
+        coverage = "coverage/counts/{sample}-{factor}-chipnexus-qfragcounts.bedgraph"
     params:
         exp_prefix = config["combinedgenome"]["experimental_prefix"],
+    log: "logs/qnexus/qnexus-{sample}-{factor}.log"
     shell: """
-        grep {params.exp_prefix} {input} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output}
+        (../programs/Q/bin/Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}-{wildcards.factor} -v -wbt) &> {log}
+        # (sed -i 's/peakcalling\///g' peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-qfrag-binding-characteristics.R) &>> {log}
+        (Rscript peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-qfrag-binding-characteristics.R) &>> {log}
+        (grep {params.exp_prefix} peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-treatment.bedgraph | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.coverage}) &>> {log}
+        """
+
+# rule get_qfrag_counts:
+    # input:
+        # "peakcalling/qnexus/{sample}-Q-treatment.bedgraph"
+    # output:
+    #     "coverage/counts/{sample}-{factor}-chipnexus-qfragcounts.bedgraph"
+    # params:
+    #     exp_prefix = config["combinedgenome"]["experimental_prefix"],
+    # log: "get_qfrag_counts/get_qfrag_counts-{sample}-{factor}.log"
+    # shell: """
+        # grep {params.exp_prefix} {input} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output}
+        # """
+
+rule build_macs2_input:
+    input:
+        bam = "alignment/{sample}-noPCRdup.bam",
+        chrsizes = config["combinedgenome"]["chrsizes"],
+    output:
+        "alignment/{sample}-exponly.bam"
+    params:
+        exp_prefix = config["combinedgenome"]["experimental_prefix"]
+    log: "logs/build_macs2_input/build_macs2_input-{sample}.log"
+    shell: """
+        (samtools index {input.bam}) &> {log}
+        (samtools view -b {input.bam} $(grep {params.exp_prefix} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') > {output}) &>> {log}
+        """
+
+#TODO: put parameters in config file
+rule macs2:
+    input:
+        bam = lambda wildcards: expand("alignment/{sample}-exponly.bam", sample= {k:v for (k,v) in PASSING.items() if (v["group"]== wildcards.group and v["pass-qc"] == "pass")}),
+        chrsizes = config["genome"]["chrsizes"]
+    output:
+        xls = "peakcalling/macs/{group}_peaks.xls",
+        peaks = "peakcalling/macs/{group}_peaks.narrowPeak",
+        summits = "peakcalling/macs/{group}_summits.bed",
+        script = "peakcalling/macs/{group}_model.r",
+        pdf = "peakcalling/macs/{group}_model.pdf",
+        treat_bg = "peakcalling/macs/{group}_treat_pileup.bdg",
+        cntrl_bg = "peakcalling/macs/{group}_control_lambda.bdg"
+    params:
+        bw = 160,
+        slocal = 200,
+        llocal = 1000,
+        exp_prefix = config["combinedgenome"]["experimental_prefix"],
+        qscore = 0.01
+    conda:
+        "envs/python2.yaml"
+    log: "logs/macs2/macs2-{group}.log"
+    shell: """
+        (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group} --SPMR --bw {params.bw} --slocal {params.slocal} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
+        (Rscript peakcalling/macs/{wildcards.group}_model.r) &>> {log}
+        (sed -i -e 's/{params.exp_prefix}//g; s/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}_peaks.narrowPeak) &>> {log}
+        (sed -i -e 's/{params.exp_prefix}//g; s/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}_summits.bed) &>> {log}
+        (sed -i -e 's/{params.exp_prefix}//g' peakcalling/macs/{wildcards.group}_treat_pileup.bdg) &>> {log}
+        (sed -i -e 's/{params.exp_prefix}//g' peakcalling/macs/{wildcards.group}_control_lambda.bdg) &>> {log}
         """
 
 rule get_coverage:
@@ -180,12 +235,12 @@ rule get_coverage:
         si_prefix = config["combinedgenome"]["spikein_prefix"]
     log: "logs/get_coverage/get_coverage-{sample}.log"
     shell: """
-        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SIplmin}) &> {log};
-        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SIpl}) &>> {log};
-        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SImin}) &>> {log};
-        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &>> {log};
-        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log};
-        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log};
+        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SIplmin}) &> {log}
+        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SIpl}) &>> {log}
+        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.si_prefix} | sed 's/{params.si_prefix}//g' | sort -k1,1 -k2,2n > {output.SImin}) &>> {log}
+        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &>> {log}
+        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
+        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.exp_prefix} | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
         """
 
 rule normalize:
@@ -234,14 +289,8 @@ rule make_stranded_bedgraph:
         antisense = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bedgraph"
     log : "logs/make_stranded_bedgraph/make_stranded_bedgraph-{sample}-{norm}.log"
     shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.plus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp) &> {log}
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-minus", $2, $3, $4}}' {input.minus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp) &>> {log}
-        (cat coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp | LC_COLLATE=C sort -k1,1 -k2,2n > {output.sense}) &>> {log}
-        (rm coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-*.tmp) &>> {log}
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.minus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp) &>> {log}
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-minus", $2, $3, $4}}' {input.plus} > coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp) &>> {log}
-        (cat coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-plus.tmp coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-minus.tmp | LC_COLLATE=C sort -k1,1 -k2,2n > {output.antisense}) &>> {log}
-        rm coverage/{wildcards.norm}/{wildcards.sample}-{wildcards.norm}-*.tmp
+        (bash scripts/makeStrandedBedgraph.sh {input.plus} {input.minus}> {output.sense}) &> {log}
+        (bash scripts/makeStrandedBedgraph.sh {input.minus} {input.plus}> {output.antisense}) &>> {log}
         """
 
 rule make_stranded_sicounts_bedgraph:
@@ -252,10 +301,7 @@ rule make_stranded_sicounts_bedgraph:
         sense = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-SENSE.bedgraph"
     log: "logs/make_stranded_sicounts_bedgraph/make_stranded_sicounts_bedgraph-{sample}.log"
     shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2, $3, $4}}' {input.plus} > coverage/counts/spikein/{wildcards.sample}-counts-plus.tmp) &> {log}
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-minus", $2, $3, $4}}' {input.minus} > coverage/counts/spikein/{wildcards.sample}-counts-minus.tmp) &>> {log}
-        (cat coverage/counts/spikein/{wildcards.sample}-counts-plus.tmp coverage/counts/spikein/{wildcards.sample}-counts-minus.tmp | LC_COLLATE=C sort -k1,1 -k2,2n > {output.sense}) &>> {log}
-        (rm coverage/counts/spikein/{wildcards.sample}-counts-*.tmp) &>> {log}
+        (bash scripts/makeStrandedBedgraph.sh {input.plus} {input.minus}> {output.sense}) &> {log}
         """
 
 rule make_stranded_annotations:
@@ -265,7 +311,7 @@ rule make_stranded_annotations:
         "../genome/annotations/stranded/{annotation}-STRANDED.bed"
     log : "logs/make_stranded_annotations/make_stranded_annotations-{annotation}.log"
     shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}}$6=="+"{{print $1"-plus", $2, $3, $4, $5, $6}} $6=="-"{{print $1"-minus", $2, $3, $4, $5, $6}}' {input} > {output}) &> {log}
+        (bash scripts/makeStrandedBed.sh {input} > {output}) &> {log}
         """
 
 rule map_counts_to_windows:
@@ -414,7 +460,7 @@ rule deeptools_matrix_stranded:
     log: "logs/deeptools/computeMatrix-{annotation}-{sample}-{factor}-{norm}.log"
     shell: """
         (computeMatrix reference-point -R {input.annotation} -S {input.sense} --referencePoint {params.refpoint} -out {output.dtfile_sense} --outFileNameMatrix {output.matrix_sense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}
-        (computeMatrix reference-point -R {input.annotation} -S {input.antisense} --referencePoint {params.refpoint} -out {output.dtfile_antisense} --outFileNameMatrix {output.matrix_antisense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}
+        (computeMatrix reference-point -R {input.annotation} -S {input.antisense} --referencePoint {params.refpoint} -out {output.dtfile_antisense} --outFileNameMatrix {output.matrix_antisense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &>> {log}
         """
 
 rule gzip_deeptools_table:
@@ -438,7 +484,7 @@ rule melt_matrix:
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
         dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"]
     script:
-        "scripts/melt_matrix2.R"
+        "scripts/melt_matrix.R"
 
 rule cat_matrices:
     input:
@@ -485,4 +531,25 @@ rule r_metagenes:
         ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
     script:
         "scripts/plotNexusMetagene.R"
+
+rule get_putative_intragenic:
+    input:
+        peaks = "peakcalling/macs/{group}_peaks.narrowPeak",
+        orfs = config["genome"]["orf-annotation"],
+        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+    output:
+        tsv = "peakcalling/macs/{group}_peaks-intragenic.tsv",
+        narrowpeak = "peakcalling/macs/{group}_peaks-intragenic.narrowPeak"
+    shell: """
+        sort -k1,1 -k2,2n -k3,3n -k9,9nr {input.peaks} | sort -k1,1 -k2,2n -k3,3n -u | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -f 1 -wo | tee {output.tsv} | cut -f1-10 > {output.narrowpeak}
+        """
+
+rule intragenic_overlap:
+    input:
+        expand("peakcalling/macs/{group}_peaks-intragenic.narrowPeak", group=GROUPS)
+    output:
+        "peakcalling/macs/intragenic-peaks-overlap.tsv"
+    shell: """
+        bedtools multiinter -header -names {GROUPS} -cluster -i {input} > {output}
+        """
 

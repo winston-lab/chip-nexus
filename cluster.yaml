@@ -1,6 +1,6 @@
 __default__:
     queue : "short"
-    time : "11:50"
+    time : 710
     n : 1
     mem : 2000
     name : "{rule}.{wildcards}"
@@ -8,60 +8,82 @@ __default__:
     err : "logs/cluster/{rule}.{wildcards}.err"
 
 fastqc_raw:
-    time : "1:00"
+    time : 60
     n : 1
     mem : 2000
 
 remove_adapter:
-    time : "3:00"
+    time : 180
     mem : 6000
 
 remove_molec_barcode:
-    time : "3:00"
+    time : 180
     n : 2
     mem : 2000
 
 fastqc_cleaned:
-    time : "1:00"
+    time : 60
     n : 1
     mem : 2000
 
 bowtie2_build:
-    time : "1:00"
+    time : 60
     mem : 2000
 
 align:
-    time : "4:00"
+    time : 240
     n : 2
     mem : 2000
 
 remove_PCR_duplicates:
-    time : "3:00"
+    time : 180
     mem : 2000
 
 get_coverage:
-    time : "1:00"
+    time : 60
     mem : 2000
 
 deseq_initial_qc:
-    time : "11:59"
+    time : 719
     mem : 60000
 
 normalize:
-    time : "1:00"
+    time : 60
     mem : 2000
+
+qnexus:
+    time : 60
+    mem: 4000
+
+build_macs2_input:
+    time : 60
+    mem : 4000
+
+macs2:
+    time : 60
+    mem : 8000
  
 deeptools_matrix:
-    time : "1:00"
+    time : 60
+    n : 1
+    mem : 2000
+
+deeptools_matrix_stranded:
+    time : 60
+    n : 1
+    mem : 2000
+
+melt_matrix:
+    time : 20
     n : 1
     mem : 2000
 
 r_heatmaps:
-    time : "4:00"
+    time : 240
     mem : 60000
 
 r_metagenes:
-    time : "4:00"
+    time : 240
     mem : 40000
 
 
