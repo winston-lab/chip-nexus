@@ -86,7 +86,9 @@ r_metagenes:
     time : 240
     mem : 40000
 
-
+plotcorrelations:
+    time : 60
+    mem : 20000
 # deseq_passing_qc:
 #     time : "11:59"
 #     mem : 40000

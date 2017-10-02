@@ -5,7 +5,7 @@ from math import log2
 configfile: "config.yaml"
 
 SAMPLES = config["samples"]
-# name_string = " ".join(SAMPLES)
+name_string = " ".join(SAMPLES)
 PASSING = {k:v for (k,v) in SAMPLES.items() if v["pass-qc"] == "pass"}
 # pass_string = " ".join(PASSING)
 GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
@@ -19,7 +19,6 @@ conditiongroups_si = config["comparisons"]["spikenorm"]["conditions"]
 
 localrules: all,
             make_stranded_annotations,
-            join_window_counts,
             normalize,
             get_si_pct,
             cat_si_pct,
@@ -42,6 +41,8 @@ rule all:
         # "coverage/counts/union-bedgraph-tfiib-chipnexus-allwindowcounts.tsv",
         #initial QC
         expand("qual_ctrl/{status}/{status}-spikein-plots.png", status=["all","passing"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.png", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.png", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
         # "qual_ctrl/all/all-pca-scree-libsizenorm.png",
         #datavis
         # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
@@ -353,44 +354,53 @@ rule make_stranded_annotations:
         (bash scripts/makeStrandedBed.sh {input} > {output}) &> {log}
         """
 
-rule map_counts_to_windows:
+rule map_to_windows:
     input:
-        bg = "coverage/counts/{sample}-{factor}-chipnexus-counts-STRANDED.bedgraph",
-        si_bg = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-SENSE.bedgraph",
+        bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-SENSE.bedgraph",
         chrsizes = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
-        si_chrsizes = os.path.splitext(config["genome"]["si-chrsizes"])[0] + "-STRANDED.tsv"
     output:
-        exp = temp("coverage/counts/{sample}-{factor}-windowcounts.bedgraph"),
-        si= temp("coverage/counts/spikein/{sample}-{factor}-SI-windowcounts.bedgraph")
+        exp = temp("coverage/{norm}/{sample}-{factor}-window-coverage-{norm}.bedgraph"),
     params:
         windowsize = config["corr-windowsize"]
     shell: """
         bedtools makewindows -g {input.chrsizes} -w {params.windowsize} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.bg} -c 4 -o sum > {output.exp}
-        bedtools makewindows -g {input.si_chrsizes} -w {params.windowsize} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.si_bg} -c 4 -o sum > {output.si}
         """
 
 rule join_window_counts:
     input:
-        exp = expand("coverage/counts/{sample}-{factor}-windowcounts.bedgraph", sample=SAMPLES, factor=config["factor"]),
-        si= expand("coverage/counts/spikein/{sample}-{factor}-SI-windowcounts.bedgraph", sample=SAMPLES, factor=config["factor"])
+        exp = expand("coverage/{{norm}}/{sample}-{factor}-window-coverage-{{norm}}.bedgraph", sample=SAMPLES, factor=config["factor"]),
     output:
-        exp = "coverage/counts/union-bedgraph-{factor}-chipnexus-allwindowcounts.tsv",
-        si = "coverage/counts/spikein/union-bedgraph-{factor}-chipnexus-SI-allwindowcounts.tsv",
+        exp = "coverage/{norm}/union-bedgraph-allwindowcoverage-{norm}.tsv.gz",
     params:
         names = list(SAMPLES.keys())
+    log: "logs/join_window_counts/join_window_counts-{norm}.log"
     shell: """
-        bedtools unionbedg -i {input.exp} -names {params.names} -header > .union-bedgraph-exp.temp
-        cut -f1-3 .union-bedgraph-exp.temp | awk 'BEGIN{{FS="\t"; OFS="-"}}{{print $1, $2, $3}}' > .positions.txt
-        cut -f4- .union-bedgraph-exp.temp > .values.txt
-        paste .positions.txt .values.txt > {output.exp}
-        rm .union-bedgraph-exp.temp .positions.txt .values.txt
-
-        bedtools unionbedg -i {input.si} -names {params.names} -header > .union-bedgraph-si.temp
-        cut -f1-3 .union-bedgraph-si.temp | awk 'BEGIN{{FS="\t"; OFS="-"}}{{print $1, $2, $3}}' > .positions.txt
-        cut -f4- .union-bedgraph-si.temp > .values.txt
-        paste .positions.txt .values.txt > {output.si}
-        rm .union-bedgraph-si.temp .positions.txt .values.txt
+        (bedtools unionbedg -i {input.exp} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz > {output.exp}) &> {log}
         """
+
+def plotcorrsamples(wildcards):
+    dd = SAMPLES if wildcards.status=="all" else PASSING
+    if wildcards.condition=="all":
+        if wildcards.norm=="libsizenorm": #condition==all,norm==lib
+            return list(dd.keys())
+        else: #condition==all,norm==spike
+            return list({k:v for (k,v) in dd.items() if v["spikein"]=="y"}.keys())
+    elif wildcards.norm=="libsizenorm": #condition!=all;norm==lib
+        return list({k:v for (k,v) in dd.items() if v["group"]==wildcards.control or v["group"]==wildcards.condition}.keys())
+    else: #condition!=all;norm==spike
+        return list({k:v for (k,v) in dd.items() if (v["group"]==wildcards.control or v["group"]==wildcards.condition) and v["spikein"]=="y"}.keys())
+
+rule plotcorrelations:
+    input:
+        "coverage/{norm}/union-bedgraph-allwindowcoverage-{norm}.tsv.gz"
+    output:
+        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-{norm}-correlations.png"
+    params:
+        pcount = .1,
+        samplelist = plotcorrsamples
+    script:
+        "scripts/plotcorr.R"
+
 
 rule deseq_initial_qc:
     input:

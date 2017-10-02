@@ -120,7 +120,7 @@ cutadapt:
 bowtie2:
     minmapq : 5
 
-corr-windowsize: 100
+corr-windowsize: 10
 
 threads: 2
 
