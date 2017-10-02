@@ -17,6 +17,16 @@ genome:
 factor: "tfiib" #name of the factor being ChIP'ed (for file-naming purposes only)
 
 samples:
+    YPD-1:
+        fastq : fastq/YPD30_1_ATCACG.R1.fastq.gz
+        group : "YPD"
+        pass-qc : pass
+        spikein : y
+    YPD-2:
+        fastq : fastq/YPD30_2_CGATGT.R1.fastq.gz
+        group : "YPD"
+        pass-qc : pass
+        spikein : y
     diamide-1:
         fastq : fastq/Dia_1_TTAGGC.R1.fastq.gz
         group : "diamide"
@@ -25,16 +35,6 @@ samples:
     diamide-2:
         fastq : fastq/Dia_2_TGACCA.R1.fastq.gz
         group : "diamide"
-        pass-qc : pass
-        spikein : y
-    nitrogen-1:
-        fastq : fastq/Nit_1_CTGATC.R1.fastq.gz
-        group : "nitrogen"
-        pass-qc : pass
-        spikein : y
-    nitrogen-2:
-        fastq : fastq/Nit_2_AAGCTA.R1.fastq.gz
-        group : "nitrogen"
         pass-qc : pass
         spikein : y
     SC-1:
@@ -47,6 +47,16 @@ samples:
         group : "SC"
         pass-qc : pass
         spikein : y
+    nitrogen-1:
+        fastq : fastq/Nit_1_CTGATC.R1.fastq.gz
+        group : "nitrogen"
+        pass-qc : pass
+        spikein : y
+    nitrogen-2:
+        fastq : fastq/Nit_2_AAGCTA.R1.fastq.gz
+        group : "nitrogen"
+        pass-qc : pass
+        spikein : y
     SD-1:
         fastq : fastq/SD_A_CAGATC.R1.fastq.gz
         group : "SD"
@@ -55,16 +65,6 @@ samples:
     SD-2:
         fastq : fastq/SD_B_ACTTGA.R1.fastq.gz
         group : "SD"
-        pass-qc : pass
-        spikein : y
-    spt6-37-1:
-        fastq : fastq/spt6A_S3_L001_R1_001.fastq.gz
-        group : "spt6-37"
-        pass-qc : pass
-        spikein : y
-    spt6-37-2:
-        fastq : fastq/spt6B_S4_L001_R1_001.fastq.gz
-        group : "spt6-37"
         pass-qc : pass
         spikein : y
     WT-37-1:
@@ -77,41 +77,41 @@ samples:
         group : "WT-37"
         pass-qc : pass
         spikein : y
-    YPD-1:
-        fastq : fastq/YPD30_1_ATCACG.R1.fastq.gz
-        group : "YPD"
+    spt6-37-1:
+        fastq : fastq/spt6A_S3_L001_R1_001.fastq.gz
+        group : "spt6-37"
         pass-qc : pass
         spikein : y
-    YPD-2:
-        fastq : fastq/YPD30_2_CGATGT.R1.fastq.gz
-        group : "YPD"
+    spt6-37-2:
+        fastq : fastq/spt6B_S4_L001_R1_001.fastq.gz
+        group : "spt6-37"
         pass-qc : pass
         spikein : y
-
+   
 #The following lists are ordered, i.e. the first condition is matched with the first control, etc. Therefore, the lists must be the same length, and the values of the conditions and controls must be present in the above sample list
 comparisons:
     libsizenorm :
         conditions:
             - "diamide"
-            - "spt6-37"
             - "nitrogen"
             - "SD"
+            - "spt6-37"
         controls:
             - "YPD"
+            - "SC"
+            - "SC"
             - "WT-37"
-            - "SC"
-            - "SC"
     spikenorm:
         conditions:
             - "diamide"
-            - "spt6-37"
             - "nitrogen"
             - "SD"
+            - "spt6-37"
         controls:
             - "YPD"
+            - "SC"
+            - "SC"
             - "WT-37"
-            - "SC"
-            - "SC"
 
 cutadapt:
     #trim_qual : 25

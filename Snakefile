@@ -20,6 +20,9 @@ conditiongroups_si = config["comparisons"]["spikenorm"]["conditions"]
 localrules: all,
             make_stranded_annotations,
             join_window_counts,
+            normalize,
+            get_si_pct,
+            cat_si_pct,
             bedgraph_to_bigwig,
             gzip_deeptools_table,
             # melt_matrix,
@@ -38,6 +41,7 @@ rule all:
         # expand("coverage/counts/{sample}-{factor}-windowcounts.bedgraph", sample=SAMPLES, factor = config["factor"]),
         # "coverage/counts/union-bedgraph-tfiib-chipnexus-allwindowcounts.tsv",
         #initial QC
+        expand("qual_ctrl/{status}/{status}-spikein-plots.png", status=["all","passing"]),
         # "qual_ctrl/all/all-pca-scree-libsizenorm.png",
         #datavis
         # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-heatmap-bygroup.png", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
@@ -224,10 +228,10 @@ rule get_coverage:
     input:
         "alignment/{sample}-noPCRdup.bam"
     output:
-        SIplmin = temp("coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plmin.bedgraph"),
+        SIplmin = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plmin.bedgraph",
         SIpl = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plus.bedgraph",
         SImin = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-minus.bedgraph",
-        plmin = temp("coverage/counts/{sample}-{factor}-chipnexus-counts-plmin.bedgraph"),
+        plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-plmin.bedgraph",
         plus = "coverage/counts/{sample}-{factor}-chipnexus-counts-plus.bedgraph",
         minus = "coverage/counts/{sample}-{factor}-chipnexus-counts-minus.bedgraph"
     params:
@@ -266,6 +270,41 @@ rule normalize:
         (scripts/libsizenorm.awk {input.SIplmin} {input.qfrags} > {output.qfrag_spikenorm}) &>> {log}
         (scripts/libsizenorm.awk {input.plmin} {input.qfrags} > {output.qfrag_libnorm}) &>> {log}
         """
+
+rule get_si_pct:
+    input:
+        plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-plmin.bedgraph",
+        SIplmin = "coverage/counts/spikein/{sample}-{factor}-chipnexus-SI-counts-plmin.bedgraph"
+    output:
+        temp("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv")
+    params:
+        group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
+    log: "logs/get_si_pct/get_si_pct-{sample}-{factor}.log"
+    shell: """
+        (echo {wildcards.sample} {params.group} $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
+        """
+
+rule cat_si_pct:
+    input:
+        expand("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
+    output:
+        "qual_ctrl/all/spikein-counts.tsv"
+    log: "logs/cat_si_pct.log"
+    shell: """
+        (cat {input} > {output}) &> {log}
+        """
+
+rule plot_si_pct:
+    input:
+        "qual_ctrl/all/spikein-counts.tsv"
+    output:
+        plot = "qual_ctrl/{status}/{status}-spikein-plots.png",
+        stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
+    params:
+        samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
+        conditions = config["comparisons"]["spikenorm"]["conditions"],
+        controls = config["comparisons"]["spikenorm"]["controls"],
+    script: "scripts/plotsipct.R"
 
 rule make_stranded_genome:
     input:
