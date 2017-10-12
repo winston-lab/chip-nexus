@@ -264,9 +264,9 @@ annotations:
 # #minimum reads PER SAMPLE for prefiltering
 # minreads: 2
 
-# deseq:
-#     fdr : 0.1
-#     fold-change-threshold: 1
+deseq:
+    fdr : 0.1
+    fold-change-threshold: 2
 
 # cluster-merge-distance: 10
 

@@ -40,7 +40,7 @@ remove_PCR_duplicates:
     mem : 2000
 
 get_coverage:
-    time : 60
+    time : 20
     mem : 2000
 
 deseq_initial_qc:
@@ -48,7 +48,7 @@ deseq_initial_qc:
     mem : 60000
 
 normalize:
-    time : 60
+    time : 20
     mem : 2000
 
 qnexus:
@@ -89,6 +89,10 @@ r_metagenes:
 plotcorrelations:
     time : 60
     mem : 20000
+
+bedgraph_to_bigwig:
+    time : 20
+    mem : 2000
 # deseq_passing_qc:
 #     time : "11:59"
 #     mem : 40000
