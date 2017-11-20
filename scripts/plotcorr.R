@@ -3,7 +3,6 @@ library(GGally)
 library(viridis)
 library(forcats)
 
-
 main = function(intable, pcount, samplelist, outpath){
     df = intable %>% read_tsv() %>% gather(key=sample, value=signal, -name) %>%
             filter(sample %in% samplelist)
@@ -11,9 +10,8 @@ main = function(intable, pcount, samplelist, outpath){
     df = df %>% spread(sample, signal) %>% select(-name)
     
     maxsignal = max(df) + pcount
+    mincor = min(cor(df, use="complete.obs"))
     plots = list()
-    
-    placeholder = data.frame(x=c(0,1), y=c(0,1))
     
     #for each row
     for (i in 1:ncol(df)){
@@ -23,20 +21,23 @@ main = function(intable, pcount, samplelist, outpath){
             #upper right (correlation)
             if (i < j){
                 c = cor(df[,i], df[,j], use = "complete.obs")
-                plot = ggplot(data = placeholder, aes(x, y)) +
-                        geom_blank() +
-                        annotate("text", x=0.5, y=0.5, label=sprintf("%.2f",round(c,2)), size=7)
+                plot = ggplot(data = tibble(x=c(0,1), y=c(0,1), corr=c)) +
+                        geom_rect(aes(fill=corr), xmin=0, ymin=0, xmax=1, ymax=1) +
+                        annotate("text", x=0.5, y=0.5, label=sprintf("%.2f",round(c,2)), size=10*c) +
+                        scale_x_continuous(breaks=NULL) +
+                        scale_y_continuous(breaks=NULL) +
+                        scale_fill_distiller(palette="Blues", limits = c(mincor,1), direction=1)
                 plots[[idx]] = plot
             }
             #top left to bot right diag (density)
             else if (i == j){
                 subdf = df %>% select(i) %>% gather(sample, value)
                 plot = ggplot(data = subdf, aes(x=(value+pcount))) +
-                        geom_density(aes(y=..scaled..), fill="black", size=0) +
+                        geom_density(aes(y=..scaled..), fill="black", size=1) +
                         scale_y_continuous(breaks=c(0,.5,1)) +
                         scale_x_log10(limit = c(pcount, maxsignal)) +
-                        annotate("text", x=sqrt(maxsignal)/2, y=0.5,
-                                 label=unique(subdf$sample), size=3) 
+                        annotate("text", x=.90*maxsignal, y=0.5, hjust=1, 
+                                 label=unique(subdf$sample), size=4, fontface="bold") 
                 plots[[idx]] = plot
             }
             #bottom left (scatter)
@@ -45,11 +46,10 @@ main = function(intable, pcount, samplelist, outpath){
                 #all of the colorspace
                 subdf = df %>% select(i,j) %>% gather(xsample, xvalue, -1) %>%
                             gather(ysample, yvalue, -c(2:3)) %>%
-                            #filter(!(xvalue == 0 & yvalue == 0))
-                            filter(!(xvalue < 5*pcount & yvalue < 5*pcount))
+                            filter(!(xvalue < 6*pcount & yvalue < 6*pcount))
                 plot = ggplot(data = subdf, aes(x=xvalue+pcount, y=yvalue+pcount)) +
-                            #geom_point(size=.5, shape=1, alpha=0.3) +
-                            geom_hex(aes(fill=log10(..count..), color=log10(..count..)), bins=50, size=0) +
+                            geom_abline(intercept = 0, slope=1, color="grey80", size=.5) +
+                            stat_bin_hex(geom="point", aes(color=log10(..count..)), binwidth=c(.04,.04), size=.15, shape=16) +
                             scale_fill_viridis(option="inferno") +
                             scale_color_viridis(option="inferno") +
                             scale_x_log10(limit = c(pcount, maxsignal)) +
@@ -64,12 +64,12 @@ main = function(intable, pcount, samplelist, outpath){
                     theme_light() +
                     theme(axis.text = element_text(size=9),
                           strip.background = element_blank(),
-                          strip.text = element_text(size=9, color="black"),
+                          strip.text = element_text(size=12, color="black", face="bold"),
                           strip.text.y = element_text(angle=180, hjust=1),
                           strip.placement="outside",
                           strip.switch.pad.grid = unit(0, "points"),
                           strip.switch.pad.wrap = unit(0, "points"))
-    w = 3+ncol(df)*3
+    w = 3+ncol(df)*4
     h = 9/16*w
     ggsave(outpath, mat, width=w, height=h, units="cm")
     print(warnings())
