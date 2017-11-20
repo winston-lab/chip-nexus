@@ -3,7 +3,7 @@ library(forcats)
 library(viridis)
 
 import = function(path){
-    read_table2(path,
+    read_tsv(path,
     	 col_names=c("group", "sample", "index", "position","cpm"),
     	 col_types=cols(group=col_character(), sample=col_character(), index=col_integer(), position=col_double(), cpm=col_double())) %>%
     filter(cpm != "NA") %>%
@@ -13,9 +13,9 @@ import = function(path){
 plotmeta = function(intable.plus, intable.minus, upstream, downstream,  refptlabel, figwidth, factor, ylabel, samples_out, group_out){
     raw = intable.plus %>% import() %>% right_join(intable.minus %>% import, by=c("group","sample","index","position"))
     raw$cpm.y = -raw$cpm.y
-    raw$sample = factor(raw$sample, ordered = TRUE)
-    raw$group = factor(raw$group, ordered = TRUE)
-    nindices = max(raw$index)
+    raw$sample = fct_inorder(raw$sample, ordered = TRUE)
+    raw$group = fct_inorder(raw$group, ordered = TRUE)
+    nindices = max(raw$index, na.rm=TRUE)
     nsamples = length(fct_unique(raw$sample))
     ngroups = length(fct_unique(raw$group))
     w = round((max(raw$position) - min(raw$position))*1000/148) 

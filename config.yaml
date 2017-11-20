@@ -1,4 +1,4 @@
-#provide tag and path to FASTA, chromosome sizes file, and annotation for heatmaps
+#provide tag and path to FASTA, chromosome sizes file 
 combinedgenome :
     name : ScSp
     fasta : ../genome/ScSp.R64.2-1.ASM294v2.fa
@@ -120,86 +120,124 @@ cutadapt:
 bowtie2:
     minmapq : 5
 
+macs2:
+    bw: 160 #bandwidth for model building: set as sonication fragment size
+    slocal: 200 #small region for calculating local lambda
+    llocal: 1000 #large region for calculating local lambda
+    fdr: 0.01 #minimum cutoff to call significant regions
+
 corr-windowsize: 10
 
 threads: 2
 
 annotations:
-    allPolII-TSS:
-        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+    # allPolII-TSS:
+    #     path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+    #     binsize : 10 
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
+    #     upstream : 500
+    #     dnstream : 4000
+    #     nan_afterend : y
+    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .98 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TSS" # label for reference point
+    #     ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 5.5 #width PER GROUP in cm
+    # verified-transcripts:
+    #     path : ../genome/annotations/Scer_transcripts_w_verifiedORFs.bed
+    #     binsize : 10 
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
+    #     upstream : 500
+    #     dnstream : 3000
+    #     nan_afterend : y
+    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .95 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "viridis"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TSS" # label for reference point
+    #     ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 5.5 #width PER GROUP in cm
+    diamide-up-TSS:
+        path : ../tss-seq/diff_exp/diamide-v-YPD/diamide-v-YPD-results-spikenorm-up.bed
         binsize : 10 
         binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 500
-        dnstream : 4000
-        sort : "ascend" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .98 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TSS" # label for reference point
-        ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16 #height in cm
-        figwidth: 5.5 #width PER GROUP in cm
-    divergent-pairs:
-        path : ../genome/annotations/Scer_divergent-gene-pairs.bed
-        binsize : 10 
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TES" # OPTIONS: TSS, TES , center
-        upstream : 2500
-        dnstream : 0
+        refpoint : "center" # OPTIONS: TSS, TES , center
+        upstream : 300
+        dnstream : 100 
+        nan_afterend : n
         sort : "keep" # OPTIONS: descend, ascend, no, keep
         sortby : "region_length"
-        pct_cutoff : .98 # do not plot data above this percentile in heatmaps
+        pct_cutoff : .95 # do not plot data above this percentile in heatmaps
+        cluster : TRUE #TRUE:cluster with k-means, FALSE: do not cluster
+        nclusters : 5
         heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         refpointlabel : "TSS" # label for reference point
-        ylabel : "divergent gene pairs"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16 #height in cm
+        ylabel : "diamide-induced TSSs"      # y-axis label (for regions represented in the BED file)
         figwidth: 5.5 #width PER GROUP in cm
-    allPolII-TSSzoom:
-        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
-        binsize : 1
+    spt6-up-TSS:
+        path : ../tss-seq/diff_exp/spt6-37-v-WT-37/spt6-37-v-WT-37-results-spikenorm-up.bed
+        binsize : 10 
         binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        refpoint : "center" # OPTIONS: TSS, TES , center
         upstream : 300
-        dnstream : 100
-        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        dnstream : 100 
+        nan_afterend : n
+        sort : "keep" # OPTIONS: descend, ascend, no, keep
         sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        pct_cutoff : .95 # do not plot data above this percentile in heatmaps
+        cluster : TRUE #TRUE:cluster with k-means, FALSE: do not cluster
+        nclusters : 5
         heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         refpointlabel : "TSS" # label for reference point
-        ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
-    dia-up-intrapeaks:
-        path : ../genome/annotations/diamide-v-YPD-de-clusters-libsizenorm-up-intragenic-genic150dn-slopR600.bed
-        binsize : 1
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 300
-        dnstream : 100
-        sort : "ascend" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TSS" # label for reference point
-        ylabel : "diamide-upregulated intragenic TSSs\nwhere genic TSS is uninduced"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
-    rhee2012raw:
-        path : ../genome/annotations/rhee2012_tata-roman-slopR120.bed
-        binsize : 1
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 30
-        dnstream : 120
-        sort : "ascend" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TATA" # label for reference point
-        ylabel : "TATA boxes (directly from Rhee 2012)"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
+        ylabel : "spt6-1004 induced TSSs"      # y-axis label (for regions represented in the BED file)
+        figwidth: 5.5 #width PER GROUP in cm
+
+    # divergent-pairs:
+    #     path : ../genome/annotations/Scer_divergent-gene-pairs.bed
+    #     binsize : 10 
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TES" # OPTIONS: TSS, TES , center
+    #     upstream : 2500
+    #     dnstream : 0
+    #     sort : "keep" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .98 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TSS" # label for reference point
+    #     ylabel : "divergent gene pairs"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 5.5 #width PER GROUP in cm
+    # allPolII-TSSzoom:
+    #     path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+    #     binsize : 1
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
+    #     upstream : 300
+    #     dnstream : 100
+    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TSS" # label for reference point
+    #     ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 4.5 #width PER GROUP in cm
+    # rhee2012raw:
+    #     path : ../genome/annotations/rhee2012_tata-roman-slopR120.bed
+    #     binsize : 1
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
+    #     upstream : 30
+    #     dnstream : 120
+    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TATA" # label for reference point
+    #     ylabel : "TATA boxes (directly from Rhee 2012)"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 4.5 #width PER GROUP in cm
     # rhee2012inclwrongstrand:
     #     path : ../genome/annotations/rhee2012_inclwrongstrand-slopR120.bed
     #     binsize : 1
@@ -213,54 +251,22 @@ annotations:
     #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
         # refpointlabel : "TATA" # label for reference point
         # ylabel : "TATA boxes (from Rhee 2012, checked for TATA)"      # y-axis label (for regions represented in the BED file)
-        # heatmap_height: 16
         # figwidth: 4.5 #width PER GROUP in cm
-    rhee2012cleaned:
-        path : ../genome/annotations/rhee2012_cleaned-slopR120.bed
-        binsize : 1
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 30
-        dnstream : 120
-        sort : "ascend" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TATA" # label for reference point
-        ylabel : "TATA boxes (from Rhee 2012, checked for TATA on correct strand)"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
-    spt6-iTSS-cleaned:
-        path : ../genome/annotations/spt6-37-v-WT-37-de-clusters-libsizenorm-up-intragenic-cleaned-slopR600.bed
-        binsize : 1
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 200
-        dnstream : 100 # must be a multiple of binsize
-        sort : "keep" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TSS" # label for reference point
-        ylabel : "spt6 iTSS"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
-    genic-w-spt6-iTSS-cleaned:
-        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS-with-clean-intra.bed
-        binsize : 1 
-        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-        refpoint : "TSS" # OPTIONS: TSS, TES , center
-        upstream : 200
-        dnstream : 100 # must be a multiple of binsize
-        sort : "keep" # OPTIONS: descend, ascend, no, keep
-        sortby : "region_length"
-        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-        refpointlabel : "TSS" # label for reference point
-        ylabel : "genic TSS with spt6 iTSS"      # y-axis label (for regions represented in the BED file)
-        heatmap_height: 16
-        figwidth: 4.5 #width PER GROUP in cm
-
+    # rhee2012cleaned:
+    #     path : ../genome/annotations/rhee2012_cleaned-slopR120.bed
+    #     binsize : 1
+    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
+    #     upstream : 30
+    #     dnstream : 120
+    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
+    #     sortby : "region_length"
+    #     pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+    #     refpointlabel : "TATA" # label for reference point
+    #     ylabel : "TATA boxes (from Rhee 2012, checked for TATA on correct strand)"      # y-axis label (for regions represented in the BED file)
+    #     figwidth: 4.5 #width PER GROUP in cm
+    
 # #minimum reads PER SAMPLE for prefiltering
 # minreads: 2
 
@@ -271,7 +277,7 @@ deseq:
 # cluster-merge-distance: 10
 
 # #distance upstream of TSS in transcript annotation file to still be considered as genic when classifying peaks
-# genic-windowsize: 30
+genic-windowsize: 30
 # max-convergent-dist: 500
 # max-divergent-dist: 500
 

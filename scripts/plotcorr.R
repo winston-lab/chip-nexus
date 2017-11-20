@@ -49,8 +49,9 @@ main = function(intable, pcount, samplelist, outpath){
                             filter(!(xvalue < 5*pcount & yvalue < 5*pcount))
                 plot = ggplot(data = subdf, aes(x=xvalue+pcount, y=yvalue+pcount)) +
                             #geom_point(size=.5, shape=1, alpha=0.3) +
-                            geom_hex(aes(fill=log10(..count..)), bins=50) +
+                            geom_hex(aes(fill=log10(..count..), color=log10(..count..)), bins=50, size=0) +
                             scale_fill_viridis(option="inferno") +
+                            scale_color_viridis(option="inferno") +
                             scale_x_log10(limit = c(pcount, maxsignal)) +
                             scale_y_log10(limit = c(pcount, maxsignal))
                 plots[[idx]] = plot
@@ -70,7 +71,7 @@ main = function(intable, pcount, samplelist, outpath){
                           strip.switch.pad.wrap = unit(0, "points"))
     w = 3+ncol(df)*3
     h = 9/16*w
-    ggsave(outpath, mat, width=w, height=h, units="cm", dpi=300, type="cairo")
+    ggsave(outpath, mat, width=w, height=h, units="cm")
     print(warnings())
 }    
 
