@@ -64,11 +64,6 @@ deeptools_matrix:
     n : 1
     mem : 2000
 
-deeptools_matrix_stranded:
-    time : 60
-    n : 1
-    mem : 2000
-
 gzip_deeptools_matrix:
     time : 20
     n : 1
@@ -94,29 +89,6 @@ plotcorrelations:
 bedgraph_to_bigwig:
     time : 20
     mem : 2000
-# deseq_passing_qc:
-#     time : "11:59"
-#     mem : 40000
-
-# call_de_bases_cond_v_ctrl:
-#     time : "11:50"
-#     mem : 40000
-
-# call_allgenic_spikenorm:
-#     time : "2:00"
-#     mem : 20000
-
-# call_allgenic_libsizenorm:
-#     time : "2:00"
-#     mem : 20000
-
-# call_de_clusters_spikenorm:
-#     time : "2:00"
-#     mem : 20000
-
-# call_de_clusters_libsizenorm:
-#     time : "2:00"
-#     mem : 20000
 
 # get_intra_orfs:
 #     time : "11:59"

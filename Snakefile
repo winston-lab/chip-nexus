@@ -22,6 +22,10 @@ localrules: all,
             get_si_pct, cat_si_pct,
             index_bam,
             bedgraph_to_bigwig,
+            classify_peaks_genic, classify_peaks_intragenic, classify_peaks_intergenic,
+            separate_de_peaks,
+            get_de_genic, get_de_intragenic, get_de_intergenic,
+            de_peaks_to_bed, separate_sig_de, get_de_category_bed
 
 rule all:
     input:
@@ -40,17 +44,20 @@ rule all:
         expand("peakcalling/qnexus/{sample}-{factor}-Q-treatment.bedgraph", sample=SAMPLES, factor=config["factor"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=["Scer_","Spom_"]),
+        #categorise peaks
+        expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         #datavis
-        # expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.svg", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.svg", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES)
+        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
+        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
 
 def plotcorrsamples(wildcards):
     dd = SAMPLES if wildcards.status=="all" else PASSING
@@ -323,6 +330,20 @@ rule macs2:
 #     shell: """
 #         sort -k1,1 -k2,2n -k3,3n -k9,9nr {input.peaks} | sort -k1,1 -k2,2n -k3,3n -u | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -f 1 -wo | tee {output.tsv} | cut -f1-10 > {output.narrowpeak}
 #         """
+rule build_genic_annotation:
+    input:
+        transcripts = config["genome"]["transcripts"],
+        orfs = config["genome"]["orf-annotation"],
+        chrsizes = config["genome"]["chrsizes"]
+    output:
+        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+    params:
+        windowsize = config["genic-windowsize"]
+    log : "logs/build_genic_annotation.log"
+    shell: """
+        (python scripts/make_genic_annotation.py -t {input.transcripts} -o {input.orfs} -d {params.windowsize} -g {input.chrsizes} -p {output}) &> {log}
+        """
+
 rule classify_peaks_genic:
     input:
         peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "peaks.narrowPeak",
@@ -346,6 +367,19 @@ rule classify_peaks_intragenic:
         "peakcalling/macs/intragenic/{group}-exp-peaks-intragenic.tsv"
     shell: """
         sed 's/{params.prefix}//g' {input.peaks} | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $16=="+"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $2+$10-$12}} $16=="-"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $13-$2+$10}}' > {output}
+        """
+
+rule build_intergenic_annotation:
+    input:
+        transcripts = config["genome"]["transcripts"],
+        chrsizes = config["genome"]["chrsizes"]
+    output:
+        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"
+    params:
+        genic_up = config["genic-windowsize"]
+    log: "logs/build_intergenic_annotation.log"
+    shell: """
+        (bedtools slop -s -l {params.genic_up} -r 0 -i {input.transcripts} -g <(sort -k1,1 {input.chrsizes})| sort -k1,1 -k2,2n | bedtools complement -i stdin -g <(sort -k1,1 {input.chrsizes}) > {output}) &> {log}
         """
 
 rule classify_peaks_intergenic:
@@ -433,76 +467,83 @@ rule de_peaks_to_bed:
         tail -n +2 {input} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, $7":"$11, $3}}' > {output}
         """
 
-rule build_genic_annotation:
+rule get_de_genic:
     input:
+        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
+        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
+        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv"
+    output:
+        "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-genic.tsv"
+    log : "logs/get_de_genic/get_de_genic-{condition}-v-{control}-{norm}.log"
+    shell: """
+        (bedtools intersect -a {input.peaks} -b {input.annotation} -wo | awk 'BEGIN{{FS=OFS="\t"}} {{print $4, $8, $9, $10}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\ttranscript_start\ttranscript_end\ttranscript_name") - > {output}) &> {log}
+        """
+
+rule get_de_intragenic:
+    input:
+        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
+        orfs = config["genome"]["orf-annotation"],
+        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
+        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv",
+    output:
+        "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intragenic.tsv",
+    log: "logs/get_de_intragenic/get_de_intragenic-{condition}-v-{control}-{norm}.log"
+    shell: """
+        (bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $12=="+"{{print $4, $8, $9, $10, ((($2+1)+$3)/2)-$8}} $12=="-"{{print $4, $8, $9, $10, $9-((($2+1)+$3)/2)}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\tORF_start\tORF_end\tORF_name\tdist_ATG_to_peak") - > {output}) &> {log}
+        """
+
+rule get_de_intergenic:
+    input:
+        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
+        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed",
         transcripts = config["genome"]["transcripts"],
         orfs = config["genome"]["orf-annotation"],
-        chrsizes = config["genome"]["chrsizes"]
+        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
+        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv",
     output:
-        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+        "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intergenic.tsv",
+    log : "logs/get_de_intergenic/get_de_intergenic-{condition}-v-{control}-{norm}.log"
+    shell: """
+        (bedtools intersect -a {input.peaks} -b {input.transcripts} {input.orfs} {input.genic_anno} -wa -v | bedtools intersect -a stdin -b {input.annotation} -wo | awk 'BEGIN{{FS=OFS="\t"}} {{print $4, $8, $9}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\tregion_start\tregion_end") - > {output}) &> {log}
+        """
+
+rule separate_sig_de:
+    input:
+        "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-{category}.tsv"
+    output:
+        up = "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-up-{category}.tsv",
+        down = "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-down-{category}.tsv"
     params:
-        windowsize = config["genic-windowsize"]
-    log : "logs/build_genic_annotation.log"
+        fdr = -log10(config["deseq"]["fdr"])
+    log: "logs/separate_sig_de/separate_sig_de-{condition}-v-{control}-{norm}-{category}.log"
     shell: """
-        (python scripts/make_genic_annotation.py -t {input.transcripts} -o {input.orfs} -d {params.windowsize} -g {input.chrsizes} -p {output}) &> {log}
+        awk -v afdr={params.fdr} 'BEGIN{{FS=OFS="\t"}}NR==1{{print > "{output.up}"; print > "{output.down}"}} NR>1 && $7>0 && $8>afdr {{print > "{output.up}"}} NR>1 && $7<0 && $8>afdr {{print > "{output.down}"}}' {input}
         """
 
-rule get_putative_genic:
-    input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}.bed",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
-    output:
-        "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-genic.tsv"
-    log : "logs/get_putative_genic/get_putative_genic-{condition}-v-{control}-{norm}-{direction}.log"
-    shell: """
-        (bedtools intersect -a {input.peaks} -b {input.annotation} -wo | awk 'BEGIN{{FS="\t|:";OFS="\t"}}{{print $1, $13, $2, $3, $4, $9, $10, $11, $5, $6}}' | sort -k10,10nr | cat <(echo -e "chrom\ttranscript_strand\tpeak_start\tpeak_end\tpeak_name\ttranscript_start\ttranscript_end\ttranscript_name\tpeak_lfc\tpeak_significance") - > {output}) &> {log}
-        """
-
-rule build_intergenic_annotation:
-    input:
-        transcripts = config["genome"]["transcripts"],
-        chrsizes = config["genome"]["chrsizes"]
-    output:
-        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"
-    params:
-        genic_up = config["genic-windowsize"]
-    log: "logs/build_intergenic_annotation.log"
-    shell: """
-        (bedtools slop -s -l {params.genic_up} -r 0 -i {input.transcripts} -g <(sort -k1,1 {input.chrsizes})| sort -k1,1 -k2,2n | bedtools complement -i stdin -g <(sort -k1,1 {input.chrsizes}) > {output}) &> {log}
-        """
-
-rule get_putative_intergenic:
-    input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}.bed",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"
-    output:
-        "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-intergenic.tsv",
-    log : "logs/get_putative_intergenic/get_putative_intergenic-{condition}-v-{control}-{norm}-{direction}.log"
-    shell: """
-        (bedtools intersect -a {input.peaks} -b {input.annotation} -wo | awk 'BEGIN{{FS="\t|:";OFS="\t"}}{{print $1, ".", $2, $3, $4, $9, $10, ".", $5, $6}}'| sort -k10,10nr | cat <(echo -e "chrom\tpeak_strand\tpeak_start\tpeak_end\tpeak_name\tregion_start\tregion_end\tregion_name\tregion_name\tpeak_lfc\tpeak_significance") - > {output}) &> {log}
-        """
-
-rule get_putative_intragenic:
-    input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}.bed",
-        orfs = config["genome"]["orf-annotation"],
-        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
-    output:
-        "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-intragenic.tsv",
-    log: "logs/get_putative_intragenic/get_putative_intragenic-{condition}-v-{control}-{norm}-{direction}.log"
-    shell: """
-        (bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS="\t|:";OFS="\t"}} $13=="+"{{print $1, $13, $2, $3, $4, $9, $10, $11, $5, $6, ((($2+1)+$3)/2)-$9}} $13=="-"{{print $1, $13, $2, $3, $4, $9, $10, $11, $5, $6, $10-((($2+1)+$3)/2)}}' | sort -k10,10nr | cat <(echo -e  "chrom\torf_strand\tpeak_start\tpeak_end\tpeak_name\torf_start\torf_end\torf_name\tpeak_lfc\tpeak_significance\tpeak_dist_from_ATG") - > {output}) &> {log}
-        """
-
-rule get_category_bed:
+rule get_de_category_bed:
     input:
         "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-{category}.tsv"
     output:
         "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-{category}.bed"
     log: "logs/get_category_bed/get_category_bed-{condition}-v-{control}-{norm}-{direction}-{category}.log"
     shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}} NR>1 {{print $1, $3, $4, $5, $10, $2}}' {input} | sort -k1,1 -k2,2n  > {output}) &> {log}
+        (tail -n +2 {input} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, $7":"$8, $3}}' | sort -k1,1 -k2,2n  > {output}) &> {log}
         """
+
+rule summarise_db_results:
+    input:
+        total = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv",
+        genic = "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-genic.tsv",
+        intragenic = "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intragenic.tsv",
+        intergenic = "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intergenic.tsv",
+    params:
+        lfc = log2(config["deseq"]["fold-change-threshold"]),
+        alpha = config["deseq"]["fdr"]
+    output:
+        summary = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-summary.svg",
+        maplot = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-maplot.svg",
+        volcano = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-volcano.svg",
+    script: "scripts/de_summary.R"
 
 rule make_stranded_genome:
     input:
@@ -588,11 +629,11 @@ rule bedgraph_to_bigwig:
 #TODO: combine the two matrix rules into one
 rule deeptools_matrix:
     input:
-        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"],
-        bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-qfrags.bw"
+        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="qfrags" else "../genome/annotations/stranded/" + wildcards.annotation + "-STRANDED.bed",
+        bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
     output:
-        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-QFRAGS.mat.gz"),
-        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-QFRAGS.tsv")
+        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.mat.gz"),
+        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.tsv")
     params:
         refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
         upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
@@ -608,34 +649,6 @@ rule deeptools_matrix:
             shell("(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --nanAfterEnd --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}")
         else:
             shell("(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}")
-
-rule deeptools_matrix_stranded:
-    input:
-        annotation = "../genome/annotations/stranded/{annotation}-STRANDED.bed",
-        sense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-SENSE.bw",
-        antisense = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-ANTISENSE.bw"
-    output:
-        dtfile_sense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-SENSE.mat.gz"),
-        matrix_sense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-SENSE.tsv"),
-        dtfile_antisense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-ANTISENSE.mat.gz"),
-        matrix_antisense = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-ANTISENSE.tsv")
-    params:
-        refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
-        upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
-        dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"],
-        binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
-        sort = lambda wildcards: config["annotations"][wildcards.annotation]["sort"],
-        sortusing = lambda wildcards: config["annotations"][wildcards.annotation]["sortby"],
-        binstat = lambda wildcards: config["annotations"][wildcards.annotation]["binstat"]
-    threads : config["threads"]
-    log: "logs/deeptools/computeMatrix-stranded-{annotation}-{sample}-{factor}-{norm}.log"
-    run:
-        if config["annotations"][wildcards.annotation]["nan_afterend"]=="y":
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.sense} --referencePoint {params.refpoint} -out {output.dtfile_sense} --outFileNameMatrix {output.matrix_sense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}")
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.antisense} --referencePoint {params.refpoint} -out {output.dtfile_antisense} --outFileNameMatrix {output.matrix_antisense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --nanAfterEnd --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &>> {log}")
-        else:
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.sense} --referencePoint {params.refpoint} -out {output.dtfile_sense} --outFileNameMatrix {output.matrix_sense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}")
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.antisense} --referencePoint {params.refpoint} -out {output.dtfile_antisense} --outFileNameMatrix {output.matrix_antisense} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &>> {log}")
 
 rule gzip_deeptools_matrix:
     input:
@@ -670,7 +683,7 @@ rule cat_matrices:
 
 rule r_heatmaps:
     input:
-        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-QFRAGS.tsv.gz"
+        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-qfrags.tsv.gz"
     output:
         heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bysample.svg",
         heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bygroup.svg",

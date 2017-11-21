@@ -210,20 +210,23 @@ annotations:
     #     refpointlabel : "TSS" # label for reference point
     #     ylabel : "divergent gene pairs"      # y-axis label (for regions represented in the BED file)
     #     figwidth: 5.5 #width PER GROUP in cm
-    # allPolII-TSSzoom:
-    #     path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
-    #     binsize : 1
-    #     binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
-    #     refpoint : "TSS" # OPTIONS: TSS, TES , center
-    #     upstream : 300
-    #     dnstream : 100
-    #     sort : "ascend" # OPTIONS: descend, ascend, no, keep
-    #     sortby : "region_length"
-    #     pct_cutoff : .97 # do not plot data above this percentile in heatmaps
-    #     heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
-    #     refpointlabel : "TSS" # label for reference point
-    #     ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
-    #     figwidth: 4.5 #width PER GROUP in cm
+    allPolII-TSSzoom:
+        path : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+        binsize : 1
+        binstat : "mean" # OPTIONS: mean, median, min, max, sum, std
+        refpoint : "TSS" # OPTIONS: TSS, TES , center
+        upstream : 300
+        dnstream : 100
+        nan_afterend : n
+        sort : "ascend" # OPTIONS: descend, ascend, no, keep
+        sortby : "region_length"
+        pct_cutoff : .97 # do not plot data above this percentile in heatmaps
+        cluster: FALSE
+        nclusters : 0
+        heatmap_colormap : "inferno"  # OPTIONS: viridis, inferno, magma, plasma
+        refpointlabel : "TSS" # label for reference point
+        ylabel : "coding genes"      # y-axis label (for regions represented in the BED file)
+        figwidth: 4.5 #width PER GROUP in cm
     # rhee2012raw:
     #     path : ../genome/annotations/rhee2012_tata-roman-slopR120.bed
     #     binsize : 1

@@ -98,19 +98,19 @@ call_de_bases = function(intable, norm, sitable, samples, groups, condition, con
                 separate(name, into=c('chrom','start','end'), sep="-") %>%
                 mutate(strand=".") %>%
                 mutate_if(is.numeric, round, 3) %>%
-                select(chrom, strand, everything()) %>%
+                select(peak_name, chrom, strand, everything()) %>%
                 write_tsv(path=normcounts, col_names=TRUE)
     
     rlogcounts = resdf %>% select(name, peak_name) %>% inner_join(rlogcounts, by='name') %>%
                     separate(name, into=c('chrom','start','end'), sep="-") %>%
                     mutate(strand=".") %>%
                     mutate_if(is.numeric, round, 3) %>%
-                    select(chrom, strand, everything()) %>%
+                    select(peak_name, chrom, strand, everything()) %>%
                     write_tsv(path=rldcounts, col_names=TRUE)
 
     resdf = resdf %>% separate(name, into=c('chrom','start','end'), sep="-") %>%
                 mutate(strand=".") %>%
-                select(chrom, strand, everything()) %>%
+                select(peak_name, chrom, strand, everything()) %>%
                 write_tsv(path=results, col_names=TRUE)
             
     #plot library size vs sizefactor
