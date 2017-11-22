@@ -195,7 +195,6 @@ annotations:
         refpointlabel : "TSS" # label for reference point
         ylabel : "spt6-1004 induced TSSs"      # y-axis label (for regions represented in the BED file)
         figwidth: 5.5 #width PER GROUP in cm
-
     # divergent-pairs:
     #     path : ../genome/annotations/Scer_divergent-gene-pairs.bed
     #     binsize : 10 

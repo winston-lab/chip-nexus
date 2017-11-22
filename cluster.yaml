@@ -58,37 +58,53 @@ build_macs2_input:
 macs2:
     time : 60
     mem : 8000
+
+join_peak_counts:
+    time: 20
+    mem: 2000
  
 deeptools_matrix:
-    time : 60
+    time : 30
     n : 1
     mem : 2000
 
 gzip_deeptools_matrix:
-    time : 20
+    time : 10
     n : 1
     mem : 2000
 
+cat_matrices:
+    time: 20
+    mem: 2000
+
 melt_matrix:
-    time : 20
+    time : 15 
     n : 1
     mem : 2000
 
 r_heatmaps:
     time : 30 
-    mem : 10000
+    mem : 12000
 
 r_metagenes:
-    time : 240
-    mem : 20000
+    time : 60 
+    mem : 12000
 
 plotcorrelations:
     time : 60
-    mem : 20000
+    mem : 12000
 
 bedgraph_to_bigwig:
-    time : 20
+    time : 10
     mem : 2000
+
+map_counts_to_peaks:
+    time: 10
+    mem : 2000
+
+summarise_db_results:
+    time: 15
+    mem : 6000
 
 # get_intra_orfs:
 #     time : "11:59"
