@@ -20,7 +20,7 @@ main = function(intable, pcount, samplelist, outpath){
             idx = ncol(df)*(i-1)+j
             #upper right (correlation)
             if (i < j){
-                c = cor(df[,i], df[,j], use = "complete.obs")
+                c = cor(df[,i], df[,j], use = "complete.obs") %>% as.numeric()
                 plot = ggplot(data = tibble(x=c(0,1), y=c(0,1), corr=c)) +
                         geom_rect(aes(fill=corr), xmin=0, ymin=0, xmax=1, ymax=1) +
                         annotate("text", x=0.5, y=0.5, label=sprintf("%.2f",round(c,2)), size=10*c) +
