@@ -21,7 +21,6 @@ localrules: all,
             make_combined_si_bedgraph,
             get_si_pct, cat_si_pct,
             index_bam,
-            bedgraph_to_bigwig,
             classify_peaks_genic, classify_peaks_intragenic, classify_peaks_intergenic,
             separate_de_peaks,
             get_de_genic, get_de_intragenic, get_de_intergenic,
@@ -35,7 +34,8 @@ rule all:
         #alignment
         expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES),
         #coverage
-        expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.{fmt}", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","combined","qfrags"], fmt=["bedgraph"]),
+        expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","combined","qfrags"]),
+        expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags"]),
         #initial QC
         # expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
         # expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
@@ -226,7 +226,7 @@ rule qnexus:
     shell: """
         (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
         (Rscript peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
-        (cp peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph {output.coverage}) &>> {log}
+        (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
         """
 
 rule normalize:
@@ -270,7 +270,7 @@ rule macs2:
         """
 
 def selectchrom(wildcards):
-    if wildcards.strand in ["plus", "minus"]:
+    if wildcards.strand not in ["SENSE","ANTISENSE"]:
         if wildcards.norm=="sicounts":
             return config["genome"]["sichrsizes"]
         return config["genome"]["chrsizes"]
@@ -281,7 +281,6 @@ def selectchrom(wildcards):
 rule bedgraph_to_bigwig:
     input:
         bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
-        # chrsizes = lambda wildcards: os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv" if (wildcards.strand=="SENSE" or wildcards.strand=="ANTISENSE") else config["genome"]["chrsizes"]
         chrsizes = selectchrom
     output:
         "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"

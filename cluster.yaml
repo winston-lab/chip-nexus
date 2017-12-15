@@ -96,7 +96,7 @@ plotcorrelations:
     mem : 12000
 
 bedgraph_to_bigwig:
-    time : 10
+    time : 5 
     mem : 2000
 
 map_counts_to_peaks:
