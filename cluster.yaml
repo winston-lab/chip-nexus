@@ -63,9 +63,21 @@ macs2:
 join_peak_counts:
     time: 20
     mem: 2000
+        
+make_stranded_bedgraph:
+    time: 15
+    mem: 2000
+
+map_to_windows:
+    time: 20
+    mem: 4000
  
+join_window_counts:
+    time: 15
+    mem: 4000
+
 deeptools_matrix:
-    time : 30
+    time : 20
     n : 1
     mem : 2000
 
@@ -79,7 +91,7 @@ cat_matrices:
     mem: 2000
 
 melt_matrix:
-    time : 15 
+    time : 10 
     n : 1
     mem : 2000
 

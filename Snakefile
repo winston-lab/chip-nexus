@@ -17,8 +17,6 @@ CATEGORIES = ["genic", "intragenic", "intergenic"]
 
 localrules: all,
             make_stranded_annotations,
-            make_combined_bedgraph,
-            make_combined_si_bedgraph,
             get_si_pct, cat_si_pct,
             index_bam,
             classify_peaks_genic, classify_peaks_intragenic, classify_peaks_intergenic,
@@ -37,17 +35,18 @@ rule all:
         expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","combined","qfrags"]),
         expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags"]),
         #initial QC
-        # expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        # expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
-        # expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
+        expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
         # expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         # expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        # expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand("datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz", annotation=config["annotations"], norm=["libsizenorm"], factor=config["factor"], strand=["SENSE", "ANTISENSE"]),
         # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.svg", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
         # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
@@ -237,6 +236,9 @@ rule normalize:
         scalefactor = lambda wildcards: config["spikein-pct"] if wildcards.norm=="spikenorm" else 1
     output:
         normalized = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
+    wildcard_constraints:
+        norm="libsizenorm|spikenorm",
+        strand="plus|minus"
     log: "logs/normalize/normalize-{sample}-{norm}-{strand}.log"
     shell: """
         (bash scripts/libsizenorm.sh {input.plmin} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
@@ -287,40 +289,41 @@ rule bedgraph_to_bigwig:
     shell: """
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
-# rule get_si_pct:
-#     input:
-#         plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-combined.bedgraph",
-#         SIplmin = "coverage/sicounts/{sample}-{factor}-chipnexus-sicounts-combined.bedgraph"
-#     output:
-#         temp("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv")
-#     params:
-#         group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
-#     log: "logs/get_si_pct/get_si_pct-{sample}-{factor}.log"
-#     shell: """
-#         (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
-#         """
 
-# rule cat_si_pct:
-#     input:
-#         expand("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
-#     output:
-#         "qual_ctrl/all/spikein-counts.tsv"
-#     log: "logs/cat_si_pct.log"
-#     shell: """
-#         (cat {input} > {output}) &> {log}
-#         """
+rule get_si_pct:
+    input:
+        plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-combined.bedgraph",
+        SIplmin = "coverage/sicounts/{sample}-{factor}-chipnexus-sicounts-combined.bedgraph"
+    output:
+        temp("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv")
+    params:
+        group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
+    log: "logs/get_si_pct/get_si_pct-{sample}-{factor}.log"
+    shell: """
+        (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
+        """
 
-# rule plot_si_pct:
-#     input:
-#         "qual_ctrl/all/spikein-counts.tsv"
-#     output:
-#         plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
-#         stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
-#     params:
-#         samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
-#         conditions = config["comparisons"]["spikenorm"]["conditions"],
-#         controls = config["comparisons"]["spikenorm"]["controls"],
-#     script: "scripts/plotsipct.R"
+rule cat_si_pct:
+    input:
+        expand("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
+    output:
+        "qual_ctrl/all/spikein-counts.tsv"
+    log: "logs/cat_si_pct.log"
+    shell: """
+        (cat {input} > {output}) &> {log}
+        """
+
+rule plot_si_pct:
+    input:
+        "qual_ctrl/all/spikein-counts.tsv"
+    output:
+        plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
+        stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
+    params:
+        samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
+        conditions = config["comparisons"]["spikenorm"]["conditions"],
+        controls = config["comparisons"]["spikenorm"]["controls"],
+    script: "scripts/plotsipct.R"
 
 rule build_genic_annotation:
     input:
@@ -607,7 +610,7 @@ rule join_window_counts:
         names = list(SAMPLES.keys())
     log: "logs/join_window_counts/join_window_counts-{norm}.log"
     shell: """
-        (bedtools unionbedg -i {input.exp} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz > {output.exp}) &> {log}
+        (bedtools unionbedg -i {input.exp} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz -f > {output.exp}) &> {log}
         """
 
 rule plotcorrelations:
@@ -621,17 +624,16 @@ rule plotcorrelations:
     script:
         "scripts/plotcorr.R"
 
-
 rule deeptools_matrix:
     input:
-        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="qfrags" else "../genome/annotations/stranded/" + wildcards.annotation + "-STRANDED.bed",
-        bw = "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
+        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="qfrags" else os.path.dirname(config["annotations"][wildcards.annotation]["path"]) + "/stranded/" + wildcards.annotation + "-STRANDED" + os.path.splitext(config["annotations"][wildcards.annotation]["path"])[1],
+        bw = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
     output:
         dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.mat.gz"),
         matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}.tsv")
     params:
         refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
-        upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"],
+        upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"] + config["annotations"][wildcards.annotation]["binsize"],
         dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"],
         binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
         sort = lambda wildcards: config["annotations"][wildcards.annotation]["sort"],
@@ -663,7 +665,6 @@ rule melt_matrix:
         group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
         binsize = lambda wildcards : config["annotations"][wildcards.annotation]["binsize"],
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
-        dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"]
     script:
         "scripts/melt_matrix.R"
 
@@ -696,6 +697,7 @@ rule r_heatmaps:
     script:
         "scripts/plotHeatmaps.R"
 
+#TODO: condition_vs_control, fix geom_ribbon
 rule r_metagenes:
     input:
         plus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-SENSE.tsv.gz",
@@ -713,13 +715,12 @@ rule r_metagenes:
     script:
         "scripts/plotNexusMetagene.R"
 
-
-rule intragenic_overlap:
-    input:
-        expand("peakcalling/macs/{group}_peaks-intragenic.narrowPeak", group=GROUPS)
-    output:
-        "peakcalling/macs/intragenic-peaks-overlap.tsv"
-    shell: """
-        bedtools multiinter -header -names {GROUPS} -cluster -i {input} > {output}
-        """
+# rule intragenic_overlap:
+#     input:
+#         expand("peakcalling/macs/{group}_peaks-intragenic.narrowPeak", group=GROUPS)
+#     output:
+#         "peakcalling/macs/intragenic-peaks-overlap.tsv"
+#     shell: """
+#         bedtools multiinter -header -names {GROUPS} -cluster -i {input} > {output}
+#         """
 
