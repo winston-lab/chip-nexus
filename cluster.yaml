@@ -8,52 +8,53 @@ __default__:
     err : "logs/cluster/{rule}.{wildcards}.err"
 
 fastqc_raw:
-    time : 60
+    time : 15
     n : 1
-    mem : 2000
+    mem : 4000
 
 remove_adapter:
-    time : 180
+    time : 15 
     mem : 6000
 
 remove_molec_barcode:
-    time : 180
+    time : 30 
     n : 2
     mem : 2000
 
 fastqc_cleaned:
-    time : 60
+    time : 15 
     n : 1
-    mem : 2000
+    mem : 4000
 
 bowtie2_build:
-    time : 60
+    time : 15 
     mem : 2000
 
 align:
-    time : 240
+    time : 40
     n : 2
     mem : 2000
 
 remove_PCR_duplicates:
-    time : 180
-    mem : 2000
+    time : 15 
+    mem : 4000
 
 get_coverage:
-    time : 20
+    time : 15 
     mem : 2000
 
 normalize:
-    time : 20
+    time : 15 
     mem : 2000
 
-qnexus:
-    time : 60
-    mem: 4000
+bam_separate_species:
+    time : 15 
+    n: 2
+    mem : 1000
 
-build_macs2_input:
-    time : 60
-    mem : 4000
+qnexus:
+    time : 15 
+    mem: 2000
 
 macs2:
     time : 60

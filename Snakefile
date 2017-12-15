@@ -35,30 +35,28 @@ rule all:
         #alignment
         expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES),
         #coverage
-        expand("coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags","combined"]),
+        expand("coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.{fmt}", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","combined","qfrags"], fmt=["bedgraph"]),
         #initial QC
-        expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
-        #qnexus
-        expand("peakcalling/qnexus/{sample}-{factor}-Q-treatment.bedgraph", sample=SAMPLES, factor=config["factor"]),
+        # expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
+        # expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
+        # expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
-        expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
-        expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
+        # expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
+        # expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        # expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups, control=controlgroups), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        # expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si, control=controlgroups_si), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         # expand("datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-metagene-bygroup.svg", annotation = config["annotations"], norm = ["libsizenorm", "spikenorm"], factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
+        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
+        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
 
 def plotcorrsamples(wildcards):
     dd = SAMPLES if wildcards.status=="all" else PASSING
@@ -130,11 +128,10 @@ rule bowtie2_build:
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.{num}.bt2", num=[1,2,3,4]),
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
     params:
-        idx_path = config["bowtie2"]["index-path"],
-        name = config["combinedgenome"]["name"]
+        idx_path = config["bowtie2"]["index-path"]
     log: "logs/bowtie2_build.log"
     shell: """
-        (bowtie2-build {input.fasta} {params.idx_path}/{params.name}) &> {log}
+        (bowtie2-build {input.fasta} {params.idx_path}/{wildcards.basename}) &> {log}
         """
 
 rule align:
@@ -152,7 +149,7 @@ rule align:
     threads : config["threads"]
     log: "logs/align/align-{sample}.log"
     shell: """
-        (bowtie2 -x {params.outbase} -U {input.fastq} --al-gz {output.aligned_fq} --un-gz {output.unaligned_fq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T {wildcards.sample} -@ {threads} -o {output.bam} -) &> {log}
+        (bowtie2 -x {params.outbase} -U {input.fastq} --al-gz {output.aligned_fq} --un-gz {output.unaligned_fq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {log}
         """
 
 rule remove_PCR_duplicates:
@@ -165,120 +162,7 @@ rule remove_PCR_duplicates:
         (python scripts/removePCRdupsFromBAM.py {input} {output}) &> {log}
         """
 
-#peakcalling programs (MACS2 and Qnexus) require BAM input
-rule bam_separate_species:
-    input:
-        bam = "alignment/{sample}-noPCRdup.bam",
-        bai = "alignment/{sample}-noPCRdup.bam.bai",
-        chrsizes = config["combinedgenome"]["chrsizes"]
-    output:
-        "alignment/{sample}-{species}only.bam"
-    log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
-    shell: """
-        (samtools view -b {input.bam} $(grep {wildcards.species} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') > {output}) &> {log}
-        """
-
-rule get_coverage:
-    input:
-        "alignment/{sample}-noPCRdup.bam"
-    output:
-        plmin = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-combined.bedgraph",
-        plus = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-plus.bedgraph",
-        minus = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-minus.bedgraph",
-    params:
-        prefix = config["combinedgenome"]["experimental_prefix"] if counttype="counts" else config["combinedgenome"]["spikein_prefix"],
-    log: "logs/get_coverage/get_coverage-{sample}-{counttype}.log"
-    shell: """
-        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.combined}) &> {log}
-        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
-        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
-        """
-
-# rule qnexus:
-#     input:
-#         "alignment/{sample}-{species}only.bam"
-#     output:
-#         "peakcalling/qnexus/{sample}-{factor}-Q-narrowPeak.bed",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-qfrag-binding-characteristics.R",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-qfrag-binding-characteristics.pdf",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-quality-statistics.tab",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-runinfo.txt",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-summit-info.tab",
-#         "peakcalling/qnexus/{sample}-{factor}-Q-treatment.bedgraph",
-#         coverage = "coverage/counts/{sample}-{factor}-chipnexus-counts-qfrags.bedgraph"
-#     params:
-#         exp_prefix = config["combinedgenome"]["experimental_prefix"],
-#     log: "logs/qnexus/qnexus-{sample}-{factor}.log"
-#     shell: """
-#         (../programs/Q/bin/Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}-{wildcards.factor} -v -wbt) &> {log}
-#         # (sed -i 's/peakcalling\///g' peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-qfrag-binding-characteristics.R) &>> {log}
-#         (Rscript peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-qfrag-binding-characteristics.R) &>> {log}
-#         (grep {params.exp_prefix} peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-Q-treatment.bedgraph | sed 's/{params.exp_prefix}//g' | sort -k1,1 -k2,2n > {output.coverage}) &>> {log}
-#         """
-
-rule normalize:
-    input:
-        plus = "coverage/counts/{sample}-{factor}-chipnexus-counts-plus.bedgraph",
-        minus = "coverage/counts/{sample}-{factor}-chipnexus-counts-minus.bedgraph",
-        plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-combined.bedgraph",
-        SIplmin = "coverage/sicounts/{sample}-{factor}-chipnexus-sicounts-combined.bedgraph",
-        qfrags = "coverage/counts/{sample}-{factor}-chipnexus-counts-qfrags.bedgraph"
-    output:
-        spikePlus = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-plus.bedgraph",
-        spikeMinus = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-minus.bedgraph",
-        spikePlMin = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-combined.bedgraph",
-        libnormPlus = "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-plus.bedgraph",
-        libnormMinus = "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-minus.bedgraph",
-        libnormPlMin= "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-combined.bedgraph",
-        qfrag_spikenorm = "coverage/spikenorm/{sample}-{factor}-chipnexus-spikenorm-qfrags.bedgraph",
-        qfrag_libnorm= "coverage/libsizenorm/{sample}-{factor}-chipnexus-libsizenorm-qfrags.bedgraph",
-    log: "logs/normalize/normalize-{sample}.log"
-    shell: """
-        (scripts/libsizenorm.awk {input.SIplmin} {input.plus} > {output.spikePlus}) &> {log}
-        (scripts/libsizenorm.awk {input.SIplmin} {input.minus} > {output.spikeMinus}) &>> {log}
-        (scripts/libsizenorm.awk {input.SIplmin} {input.SIplmin} > {output.spikePlMin}) &>> {log}
-        (scripts/libsizenorm.awk {input.plmin} {input.plus} > {output.libnormPlus}) &>> {log}
-        (scripts/libsizenorm.awk {input.plmin} {input.minus} > {output.libnormMinus}) &>> {log}
-        (scripts/libsizenorm.awk {input.plmin} {input.plmin} > {output.libnormPlMin}) &>> {log}
-        (scripts/libsizenorm.awk {input.SIplmin} {input.qfrags} > {output.qfrag_spikenorm}) &>> {log}
-        (scripts/libsizenorm.awk {input.plmin} {input.qfrags} > {output.qfrag_libnorm}) &>> {log}
-        """
-
-rule get_si_pct:
-    input:
-        plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-combined.bedgraph",
-        SIplmin = "coverage/sicounts/{sample}-{factor}-chipnexus-sicounts-combined.bedgraph"
-    output:
-        temp("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv")
-    params:
-        group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
-    log: "logs/get_si_pct/get_si_pct-{sample}-{factor}.log"
-    shell: """
-        (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
-        """
-
-rule cat_si_pct:
-    input:
-        expand("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
-    output:
-        "qual_ctrl/all/spikein-counts.tsv"
-    log: "logs/cat_si_pct.log"
-    shell: """
-        (cat {input} > {output}) &> {log}
-        """
-
-rule plot_si_pct:
-    input:
-        "qual_ctrl/all/spikein-counts.tsv"
-    output:
-        plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
-        stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
-    params:
-        samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
-        conditions = config["comparisons"]["spikenorm"]["conditions"],
-        controls = config["comparisons"]["spikenorm"]["controls"],
-    script: "scripts/plotsipct.R"
-
+#indexing is required for separating species by samtools view
 rule index_bam:
     input:
         bam = "alignment/{sample}-noPCRdup.bam",
@@ -289,10 +173,78 @@ rule index_bam:
         (samtools index {input.bam}) &> {log}
         """
 
+#peakcalling programs (MACS2 and Qnexus) require BAM input
+rule bam_separate_species:
+    input:
+        bam = "alignment/{sample}-noPCRdup.bam",
+        bai = "alignment/{sample}-noPCRdup.bam.bai",
+        chrsizes = config["combinedgenome"]["chrsizes"]
+    params:
+        filterprefix = lambda wildcards: config["combinedgenome"]["spikein_prefix"] if wildcards.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["experimental_prefix"],
+    output:
+        "alignment/{sample}-{species}only.bam"
+    threads: config["threads"]
+    log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
+    shell: """
+        (samtools view -h {input.bam} $(grep {wildcards.species} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}' | sed 's/{wildcards.species}//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
+        """
+
+rule get_coverage:
+    input:
+        "alignment/{sample}-noPCRdup.bam"
+    params:
+        prefix = lambda wildcards: config["combinedgenome"]["experimental_prefix"] if wildcards.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
+    output:
+        plmin = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-combined.bedgraph",
+        plus = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-plus.bedgraph",
+        minus = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-minus.bedgraph",
+    wildcard_constraints:
+        counttype="counts|sicounts"
+    log: "logs/get_coverage/get_coverage-{sample}-{counttype}.log"
+    shell: """
+        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &> {log}
+        (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
+        (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
+        """
+
+#NOTE: requires Q to be in $PATH
+rule qnexus:
+    input:
+        lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] + "only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] + "only.bam"
+    output:
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-narrowPeak.bed",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-qfrag-binding-characteristics.R",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-qfrag-binding-characteristics.pdf",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-quality-statistics.tab",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-runinfo.txt",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-summit-info.tab",
+        "peakcalling/qnexus/{sample}-{factor}-{counttype}-Q-treatment.bedgraph",
+        coverage = "coverage/{counttype}/{sample}-{factor}-chipnexus-{counttype}-qfrags.bedgraph"
+    wildcard_constraints:
+        counttype="counts|sicounts"
+    log: "logs/qnexus/qnexus-{sample}-{counttype}.log"
+    shell: """
+        (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
+        (Rscript peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
+        (cp peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph {output.coverage}) &>> {log}
+        """
+
+rule normalize:
+    input:
+        counts = "coverage/counts/{sample}-{factor}-chipnexus-counts-{strand}.bedgraph",
+        plmin = lambda wildcards: "coverage/counts/" + wildcards.sample + "-" + wildcards.factor + "-chipnexus-counts-combined.bedgraph" if wildcards.norm=="libsizenorm" else "coverage/sicounts/" + wildcards.sample + "-" + wildcards.factor + "-chipnexus-sicounts-combined.bedgraph"
+    params:
+        scalefactor = lambda wildcards: config["spikein-pct"] if wildcards.norm=="spikenorm" else 1
+    output:
+        normalized = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
+    log: "logs/normalize/normalize-{sample}-{norm}-{strand}.log"
+    shell: """
+        (bash scripts/libsizenorm.sh {input.plmin} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
+        """
 
 rule macs2:
     input:
-        bam = lambda wildcards: expand("alignment/{sample}-{species}only.bam", sample= {k:v for (k,v) in PASSING.items() if (v["group"]== wildcards.group and v["pass-qc"] == "pass")}, species=wildcards.species),
+        bam = lambda wildcards: expand("alignment/{sample}-" + wildcards.species + "only.bam", sample={k for (k,v) in PASSING.items() if (v["group"]==wildcards.group and v["pass-qc"]=="pass")}),
         chrsizes = lambda wildcards: config["genome"]["chrsizes"] if wildcards.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
     output:
         xls = "peakcalling/macs/{group}-{species}_peaks.xls",
@@ -306,19 +258,70 @@ rule macs2:
         bw = config["macs2"]["bw"],
         slocal = config["macs2"]["slocal"],
         llocal = config["macs2"]["llocal"],
-        prefix = lambda wildcards: config["combinedgenome"]["experimental_prefix"] if wildcards.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["spikein_prefix"],
         qscore = config["macs2"]["fdr"]
     conda:
-        "envs/python2.yaml"
+        "envs/macs2.yaml"
     log: "logs/macs2/macs2-{group}-{species}.log"
     shell: """
         (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group}-{wildcards.species} --SPMR --bw {params.bw} --slocal {params.slocal} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
         (Rscript peakcalling/macs/{wildcards.group}-{wildcards.species}_model.r) &>> {log}
-        (sed -i -e 's/{params.prefix}//g; s/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_peaks.narrowPeak) &>> {log}
-        (sed -i -e 's/{params.prefix}//g; s/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_summits.bed) &>> {log}
-        (sed -i -e 's/{params.prefix}//g' peakcalling/macs/{wildcards.group}-{wildcards.species}_treat_pileup.bdg) &>> {log}
-        (sed -i -e 's/{params.prefix}//g' peakcalling/macs/{wildcards.group}-{wildcards.species}_control_lambda.bdg) &>> {log}
+        (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_peaks.narrowPeak) &>> {log}
+        (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_summits.bed) &>> {log}
         """
+
+def selectchrom(wildcards):
+    if wildcards.strand in ["plus", "minus"]:
+        if wildcards.norm=="sicounts":
+            return config["genome"]["sichrsizes"]
+        return config["genome"]["chrsizes"]
+    if wildcards.norm=="sicounts":
+        return os.path.splitext(config["genome"]["sichrsizes"])[0] + "-STRANDED.tsv"
+    return os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv"
+
+rule bedgraph_to_bigwig:
+    input:
+        bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
+        # chrsizes = lambda wildcards: os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv" if (wildcards.strand=="SENSE" or wildcards.strand=="ANTISENSE") else config["genome"]["chrsizes"]
+        chrsizes = selectchrom
+    output:
+        "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
+    shell: """
+        bedGraphToBigWig {input.bg} {input.chrsizes} {output}
+        """
+# rule get_si_pct:
+#     input:
+#         plmin = "coverage/counts/{sample}-{factor}-chipnexus-counts-combined.bedgraph",
+#         SIplmin = "coverage/sicounts/{sample}-{factor}-chipnexus-sicounts-combined.bedgraph"
+#     output:
+#         temp("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv")
+#     params:
+#         group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
+#     log: "logs/get_si_pct/get_si_pct-{sample}-{factor}.log"
+#     shell: """
+#         (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
+#         """
+
+# rule cat_si_pct:
+#     input:
+#         expand("qual_ctrl/all/{sample}-{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
+#     output:
+#         "qual_ctrl/all/spikein-counts.tsv"
+#     log: "logs/cat_si_pct.log"
+#     shell: """
+#         (cat {input} > {output}) &> {log}
+#         """
+
+# rule plot_si_pct:
+#     input:
+#         "qual_ctrl/all/spikein-counts.tsv"
+#     output:
+#         plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
+#         stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
+#     params:
+#         samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
+#         conditions = config["comparisons"]["spikenorm"]["conditions"],
+#         controls = config["comparisons"]["spikenorm"]["controls"],
+#     script: "scripts/plotsipct.R"
 
 rule build_genic_annotation:
     input:
@@ -619,15 +622,6 @@ rule plotcorrelations:
     script:
         "scripts/plotcorr.R"
 
-rule bedgraph_to_bigwig:
-    input:
-        bg = "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bedgraph",
-        chrsizes = lambda wildcards: os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv" if (wildcards.strand=="SENSE" or wildcards.strand=="ANTISENSE") else config["genome"]["chrsizes"]
-    output:
-        "coverage/{norm}/bw/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
-    shell: """
-        bedGraphToBigWig {input.bg} {input.chrsizes} {output}
-        """
 
 rule deeptools_matrix:
     input:
