@@ -634,7 +634,7 @@ rule deeptools_matrix:
     params:
         refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
         upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"] + config["annotations"][wildcards.annotation]["binsize"],
-        dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"],
+        dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"] + config["annotations"][wildcards.annotation]["binsize"],
         binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
         sort = lambda wildcards: config["annotations"][wildcards.annotation]["sort"],
         sortusing = lambda wildcards: config["annotations"][wildcards.annotation]["sortby"],
@@ -662,6 +662,7 @@ rule melt_matrix:
     output:
         temp("datavis/{annotation}/{norm}/{annotation}-{sample}-{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz")
     params:
+        refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
         group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
         binsize = lambda wildcards : config["annotations"][wildcards.annotation]["binsize"],
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
