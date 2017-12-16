@@ -41,21 +41,24 @@ rule all:
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
-        # expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
-        # expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
+        expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
+        expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
         expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], fmt=["tsv", "bed"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        # expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","down"], category=CATEGORIES),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        # expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
+        #differential binding of peaks
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], fmt=["tsv", "bed"]),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged", "down"], fmt=["tsv", "bed"]),
+        #categorize DB peaks
+        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
+        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
+        #DB summary
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
 
 def plotcorrsamples(wildcards):
     dd = SAMPLES if wildcards.status=="all" else PASSING
@@ -348,7 +351,7 @@ rule classify_peaks_genic:
     output:
         "peakcalling/macs/genic/{group}-exp-peaks-genic.tsv"
     shell: """
-        sed 's/{params.prefix}//g' {input.peaks} | bedtools intersect -a stdin -b {input.annotation} -wo | cut --complement -f11-13,15-17 > {output}
+        bedtools intersect -a {input.peaks} -b {input.annotation} -wo | cut --complement -f11-13,15-17 > {output}
         """
 
 rule classify_peaks_intragenic:
@@ -361,7 +364,7 @@ rule classify_peaks_intragenic:
     output:
         "peakcalling/macs/intragenic/{group}-exp-peaks-intragenic.tsv"
     shell: """
-        sed 's/{params.prefix}//g' {input.peaks} | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $16=="+"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $2+$10-$12}} $16=="-"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $13-$2+$10}}' > {output}
+        bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $16=="+"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $2+$10-$12}} $16=="-"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $13-$2+$10}}' > {output}
         """
 
 rule build_intergenic_annotation:
@@ -389,7 +392,7 @@ rule classify_peaks_intergenic:
     output:
         "peakcalling/macs/intergenic/{group}-exp-peaks-intergenic.tsv"
     shell: """
-        sed 's/{params.prefix}//g' {input.peaks} | bedtools intersect -a stdin -b {input.transcripts} {input.orfs} -wa -v | bedtools intersect -a stdin -b {input.genic_anno} -wa -v | bedtools intersect -a stdin -b {input.annotation} -wa > {output}
+        bedtools intersect -a {input.peaks} -b {input.transcripts} {input.orfs} -wa -v | bedtools intersect -a stdin -b {input.genic_anno} -wa -v | bedtools intersect -a stdin -b {input.annotation} -wa > {output}
         """
 
 rule peakstats:
@@ -432,7 +435,7 @@ rule join_peak_counts:
     params:
         names = list(SAMPLES.keys())
     shell: """
-        bedtools unionbedg -i {input} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz > {output}
+        bedtools unionbedg -i {input} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz -f > {output}
         """
 
 rule call_de_peaks:
@@ -440,8 +443,8 @@ rule call_de_peaks:
         expcounts = "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz",
         sicounts = lambda wildcards: "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["spikein_prefix"] + ".tsv.gz" if wildcards.norm=="spikenorm" else "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz"
     params:
-        samples = lambda wildcards : list({k:v for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)}.keys()),
-        groups = lambda wildcards : [PASSING[x]["group"] for x in {k:v for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)}],
+        samples = lambda wildcards : [k for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)],
+        groups = lambda wildcards : [PASSING[x]["group"] for x in [k for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)]],
         alpha = config["deseq"]["fdr"],
         lfc = log2(config["deseq"]["fold-change-threshold"]),
     output:
@@ -457,12 +460,13 @@ rule separate_de_peaks:
         "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv"
     output:
         up = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-up.tsv",
+        unchanged = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-unchanged.tsv",
         down = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-down.tsv"
     params:
         fdr = -log10(config["deseq"]["fdr"])
     log: "logs/separate_de_peaks/separate_de_peaks-{condition}-v-{control}-{norm}.log"
     shell: """
-        (awk -v afdr={params.fdr} 'BEGIN{{FS=OFS="\t"}} NR==1{{print > "{output.up}"; print > "{output.down}" }} NR>1 && $10>afdr && $7>0 {{print > "{output.up}"}} NR>1 && $10>afdr && $7<0 {{print > "{output.down}"}}' {input}) &> {log}
+        (awk -v afdr={params.fdr} 'BEGIN{{FS=OFS="\t"}} NR==1{{print > "{output.up}";print > "{output.unchanged}"; print > "{output.down}" }} NR>1 && $10>afdr && $7>0 {{print > "{output.up}"}} NR>1 && $10>afdr && $7<0 {{print > "{output.down}"}} NR>1 && $10<=afdr {{print > "{output.unchanged}"}}' {input}) &> {log}
         """
 
 rule de_peaks_to_bed:
@@ -520,12 +524,13 @@ rule separate_sig_de:
         "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-{category}.tsv"
     output:
         up = "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-up-{category}.tsv",
+        unchanged = "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-unchanged-{category}.tsv",
         down = "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-down-{category}.tsv"
     params:
         fdr = -log10(config["deseq"]["fdr"])
     log: "logs/separate_sig_de/separate_sig_de-{condition}-v-{control}-{norm}-{category}.log"
     shell: """
-        awk -v afdr={params.fdr} 'BEGIN{{FS=OFS="\t"}}NR==1{{print > "{output.up}"; print > "{output.down}"}} NR>1 && $7>0 && $8>afdr {{print > "{output.up}"}} NR>1 && $7<0 && $8>afdr {{print > "{output.down}"}}' {input}
+        awk -v afdr={params.fdr} 'BEGIN{{FS=OFS="\t"}}NR==1{{print > "{output.up}";print > "{output.unchanged}"; print > "{output.down}"}} NR>1 && $7>0 && $8>afdr {{print > "{output.up}"}} NR>1 && $7<0 && $8>afdr {{print > "{output.down}"}} NR>1 && $8<=afdr{{print > "{output.unchanged}"}}' {input}
         """
 
 rule get_de_category_bed:
@@ -583,7 +588,7 @@ rule make_stranded_annotations:
     input:
         lambda wildcards : config["annotations"][wildcards.annotation]["path"]
     output:
-        "../genome/annotations/stranded/{annotation}-STRANDED.bed"
+        "{annopath}/stranded/{annotation}-STRANDED.{ext}"
     log : "logs/make_stranded_annotations/make_stranded_annotations-{annotation}.log"
     shell: """
         (bash scripts/makeStrandedBed.sh {input} > {output}) &> {log}
@@ -721,13 +726,3 @@ rule r_metagenes:
         ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
     script:
         "scripts/plotNexusMetagene.R"
-
-# rule intragenic_overlap:
-#     input:
-#         expand("peakcalling/macs/{group}_peaks-intragenic.narrowPeak", group=GROUPS)
-#     output:
-#         "peakcalling/macs/intragenic-peaks-overlap.tsv"
-#     shell: """
-#         bedtools multiinter -header -names {GROUPS} -cluster -i {input} > {output}
-#         """
-

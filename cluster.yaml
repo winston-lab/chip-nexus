@@ -60,9 +60,17 @@ macs2:
     time : 60
     mem : 8000
 
+combine_peaks:
+    time: 15
+    mem: 4000
+
 join_peak_counts:
     time: 20
     mem: 2000
+
+call_de_peaks:
+    time: 30
+    mem: 8000
         
 make_stranded_bedgraph:
     time: 15
@@ -97,7 +105,7 @@ melt_matrix:
 
 r_heatmaps:
     time : 30 
-    mem : 10000
+    mem : 6000
 
 r_metagenes:
     time : 30 
@@ -118,16 +126,3 @@ map_counts_to_peaks:
 summarise_db_results:
     time: 15
     mem : 6000
-
-# get_intra_orfs:
-#     time : "11:59"
-#     mem : 20000
-
-# meme_chip:
-#     time : "11:59"
-#     mem : 10000
-#     n : 2 #this is hardcoded in the snakefile to run with two cores
-
-# class_v_genic:
-#     time : "6:00"
-#     mem : 10000
