@@ -40,11 +40,11 @@ remove_PCR_duplicates:
     mem : 4000
 
 get_coverage:
-    time : 15 
+    time : 5 
     mem : 2000
 
 normalize:
-    time : 15 
+    time : 5 
     mem : 2000
 
 bam_separate_species:
@@ -73,7 +73,7 @@ call_de_peaks:
     mem: 8000
         
 make_stranded_bedgraph:
-    time: 15
+    time: 5
     mem: 2000
 
 map_to_windows:
@@ -89,13 +89,8 @@ deeptools_matrix:
     n : 1
     mem : 2000
 
-gzip_deeptools_matrix:
-    time : 10
-    n : 1
-    mem : 2000
-
 cat_matrices:
-    time: 20
+    time: 10
     mem: 2000
 
 melt_matrix:
@@ -116,7 +111,7 @@ plotcorrelations:
     mem : 12000
 
 bedgraph_to_bigwig:
-    time : 5 
+    time : 2 
     mem : 2000
 
 map_counts_to_peaks:
