@@ -40,7 +40,7 @@ remove_PCR_duplicates:
     mem : 4000
 
 get_coverage:
-    time : 5 
+    time : 10 
     mem : 2000
 
 normalize:
