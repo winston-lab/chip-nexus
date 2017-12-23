@@ -99,11 +99,11 @@ melt_matrix:
     mem : 2000
 
 r_heatmaps:
-    time : 30 
-    mem : 8000
+    time : 60 
+    mem : 10000
 
 r_metagenes:
-    time : 30 
+    time : 60 
     mem : 10000
 
 plotcorrelations:
