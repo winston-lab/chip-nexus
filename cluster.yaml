@@ -73,7 +73,7 @@ call_de_peaks:
     mem: 8000
         
 make_stranded_bedgraph:
-    time: 5
+    time: 15
     mem: 2000
 
 map_to_windows:
