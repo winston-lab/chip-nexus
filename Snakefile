@@ -227,7 +227,7 @@ rule qnexus:
     log: "logs/qnexus/qnexus-{sample}-{counttype}.log"
     shell: """
         (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
-        (Rscript peakcalling/qnexus/{wildcards.sample}-{wildcards.factor}_{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
+        (Rscript peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}_{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
         (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
         """
 
@@ -670,7 +670,7 @@ rule melt_matrix:
 
 rule cat_matrices:
     input:
-        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}-{sample}-{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
+        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}-{sample}_{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
     output:
         "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
     shell: """
