@@ -289,6 +289,8 @@ rule bedgraph_to_bigwig:
         chrsizes = selectchrom
     output:
         "coverage/{norm}/{sample}-{factor}-chipnexus-{norm}-{strand}.bw"
+    wildcard_constraints:
+        strand="plus|minus|qfrags|SENSE|ANTISENSE"
     shell: """
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
