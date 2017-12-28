@@ -99,7 +99,7 @@ melt_matrix:
     mem : 2000
 
 r_heatmaps:
-    time : 90 
+    time : 20 
     mem : 16000
 
 r_metagenes:
