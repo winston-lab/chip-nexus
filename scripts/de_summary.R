@@ -19,7 +19,7 @@ bin = function(df, type){
     group_by(change) %>% count() %>% filter(!is.na(change)) %>% mutate(class=type) %>% return()
 }
 
-main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, out.ma, out.volcano, out.summary, factor){
+main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, out.ma, out.volcano, out.volcano_free, out.summary, factor){
     all = import(in.all, alpha) 
     genic = import(in.genic, alpha)
     intra = import(in.intra, alpha)
@@ -31,9 +31,9 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
     cleandf$type = fct_inorder(cleandf$type, ordered=TRUE)
     minx = quantile(cleandf$meanExpr, .2)
     
-    maplot = ggplot(data = cleandf, aes(x=meanExpr, y = log2FoldChange)) +
+    maplot = ggplot(data = cleandf, aes(x=meanExpr, y=log2FoldChange)) +
                 geom_hline(yintercept = 0, linetype="dashed") +
-                geom_point(aes(color=sig), alpha=0.4, stroke=0, size=1) +
+                geom_point(aes(color=sig), shape=16, alpha=0.4, stroke=0, size=.8) +
                 scale_color_manual(values = c("grey40", "red"), guide=FALSE) +
                 stat_dens2d_filter(data = cleandf %>% filter(sig & meanExpr>minx & log2FoldChange > 0),
                                    geom = "text_repel",
@@ -51,12 +51,13 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
                                    box.padding = unit(0.1, "lines"),
                                    nudge_y = -.3,
                                    size=1.5) + 
-                scale_x_log10(name="mean expression level") +
+                scale_x_log10(name="mean signal", limits=c(1, NA),
+                              expand=c(0,0)) +
                 scale_y_continuous(breaks = scales::pretty_breaks(n=5)) +
                 ylab(substitute(bold(log[bold(2)]~frac(cond,cont)), list(cond=cond, cont=ctrl))) +
                 facet_wrap(~type, nrow=1) +
                 ggtitle(paste(factor, "ChIP-nexus MA plots:", cond, "vs.", ctrl),
-                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ .(lfc) ~ "@ FDR" ~ .(alpha)))  +
+                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ log[2](.(lfc)) ~ "@ FDR" ~ .(alpha)))  +
                 theme_bw() +
                 theme(text = element_text(size=12, face="bold"),
                       axis.text = element_text(size=10, color="black"),
@@ -67,7 +68,7 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
     ggsave(out.ma, maplot, height=10, width=30, units="cm")
     
     volcano = ggplot(data = cleandf, aes(x = log2FoldChange, y = logpadj))+
-                geom_point(aes(color=sig), alpha=0.4, stroke=0, size=1) +
+                geom_point(aes(color=sig), shape=16, alpha=0.4, stroke=0, size=.8) +
                 scale_color_manual(values = c("grey40", "red"), guide=FALSE) +
                 stat_dens2d_filter(data = cleandf %>% filter(sig & log2FoldChange < 0),
                                    geom = "text_repel",
@@ -87,9 +88,8 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
                                    size=1.5) +
                 ylab(expression(bold(-log[10] ~ p[adj]))) +
                 xlab(substitute(bold(log[bold(2)]~frac(cond,cont)), list(cond=cond, cont=ctrl))) +
-                facet_wrap(~type, nrow=1) +
                 ggtitle(paste(factor, "ChIP-nexus volcano plots:", cond, "vs.", ctrl),
-                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ .(lfc) ~ "@ FDR" ~ .(alpha)))  +
+                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ log[2](.(lfc)) ~ "@ FDR" ~ .(alpha)))  +
                 theme_bw() +
                 theme(text = element_text(size=12, face="bold"),
                       axis.text = element_text(size=10, color="black"),
@@ -97,7 +97,8 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
                       strip.background = element_blank(),
                       strip.text = element_text(size=12, face="bold", color="black"))
     
-    ggsave(out.volcano, volcano, height=10, width=30, units="cm")
+    ggsave(out.volcano, volcano + facet_wrap(~type, nrow=1) , height=10, width=30, units="cm")
+    ggsave(out.volcano_free, volcano + facet_wrap(~type, nrow=1, scales="free_y") , height=10, width=30, units="cm")
     
     countdf = bind_rows(bin(genic, 'genic')) %>% bind_rows(bin(intra, 'intragenic')) %>%
                 bind_rows(bin(inter, 'intergenic')) %>%
@@ -124,7 +125,7 @@ main = function(in.all, in.genic, in.intra, in.inter, cond, ctrl, lfc, alpha, ou
                 guides(fill=guide_legend(reverse=TRUE)) +
                 theme_void() +
                 ggtitle(paste(factor, "ChIP-nexus differential binding:", cond, "vs.", ctrl),
-                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ .(lfc) ~ "@ FDR" ~ .(alpha)))  +
+                        subtitle = bquote("DESeq2: |" ~ log[2] ~ "fold-change" ~ "| >" ~ log[2](.(lfc)) ~ "@ FDR" ~ .(alpha)))  +
                 theme(legend.text = element_text(size=12, face="bold", color="black"),
                       legend.title = element_blank(),
                       legend.position = c(.96, .5),
@@ -147,5 +148,6 @@ main(in.all = snakemake@input[["total"]],
      alpha = snakemake@params[["alpha"]],
      out.ma = snakemake@output[["maplot"]],
      out.volcano = snakemake@output[["volcano"]],
+     out.volcano_free = snakemake@output[["volcano_free"]],
      out.summary = snakemake@output[["summary"]],
      factor = snakemake@wildcards[["factor"]])

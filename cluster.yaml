@@ -104,7 +104,7 @@ r_heatmaps:
 
 r_metagenes:
     time : 60 
-    mem : 10000
+    mem : 16000
 
 plotcorrelations:
     time : 60
