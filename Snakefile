@@ -36,8 +36,8 @@ rule all:
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags"]),
         #initial QC
         expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
@@ -602,18 +602,18 @@ rule map_to_windows:
         bg = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-SENSE.bedgraph",
         chrsizes = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
     output:
-        exp = temp("coverage/{norm}/{sample}_{factor}-window-coverage-{norm}.bedgraph"),
-    params:
-        windowsize = config["corr-windowsize"]
+        exp = temp("coverage/{norm}/{sample}_{factor}-window-{windowsize}-coverage-{norm}.bedgraph"),
+    # params:
+        # windowsize = config["corr-windowsize"]
     shell: """
-        bedtools makewindows -g {input.chrsizes} -w {params.windowsize} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.bg} -c 4 -o sum > {output.exp}
+        bedtools makewindows -g {input.chrsizes} -w {wildcards.windowsize} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.bg} -c 4 -o sum > {output.exp}
         """
 
 rule join_window_counts:
     input:
-        exp = expand("coverage/{{norm}}/{sample}_{factor}-window-coverage-{{norm}}.bedgraph", sample=SAMPLES, factor=config["factor"]),
+        exp = expand("coverage/{{norm}}/{sample}_{factor}-window-{{windowsize}}-coverage-{{norm}}.bedgraph", sample=SAMPLES, factor=config["factor"]),
     output:
-        exp = "coverage/{norm}/union-bedgraph-allwindowcoverage-{norm}.tsv.gz",
+        exp = "coverage/{norm}/union-bedgraph-window-{windowsize}-{norm}.tsv.gz",
     params:
         names = list(SAMPLES.keys())
     log: "logs/join_window_counts/join_window_counts-{norm}.log"
@@ -623,9 +623,9 @@ rule join_window_counts:
 
 rule plotcorrelations:
     input:
-        "coverage/{norm}/union-bedgraph-allwindowcoverage-{norm}.tsv.gz"
+        "coverage/{norm}/union-bedgraph-window-{windowsize}-{norm}.tsv.gz"
     output:
-        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-{norm}-correlations.svg"
+        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-window-{windowsize}-{norm}-correlations.svg"
     params:
         pcount = 0.1,
         samplelist = plotcorrsamples
