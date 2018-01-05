@@ -239,7 +239,7 @@ rule get_protection:
     wildcard_constraints:
         counttype="counts|sicounts"
     shell: """
-        genomeCoverageBed -bga -fs $(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | awk '{{sum+=$1; count++}}END{{print sum/count}}' | xargs printf "%.*f\n" 0) -ibam {input.bam} > {output.coverage}
+        genomeCoverageBed -bga -fs $(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | awk '{{sum+=$1; count++}}END{{print sum/count}}' | xargs printf "%.*f\n" 0) -ibam {input.bam} | LC_COLLATE=C sort -k1,1 -k2,2n > {output.coverage}
         """
 
 
