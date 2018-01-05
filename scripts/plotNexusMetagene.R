@@ -1,7 +1,7 @@
+library(psych)
 library(tidyverse)
 library(forcats)
-library(viridis)
-library(psych)
+library(ggthemes)
 
 import = function(path){
     read_tsv(path,
@@ -42,6 +42,7 @@ apply_theme = function(ggp){
     ggp = ggp +
         theme_light() +
         theme(strip.text = element_text(size=12, face="bold", color="black"),
+              strip.text.y = element_text(angle=0),
               axis.text.x = element_text(size=10, face="bold", color="black"),
               axis.text.y = element_text(size=10, color="black"),
               axis.title = element_text(size=12, face="bold"),
@@ -59,8 +60,8 @@ apply_theme = function(ggp){
 stranded_meta = function(df, factor, nindices, ylabel, upstream, downstream, refptlabel){
     metagene_base = ggplot(data=df, aes(x=position)) +
                     geom_vline(xintercept=0, size=1, color="grey65") +
-                    geom_col(aes(y=pos.mean), fill="#08306b", color="#08306b", alpha=.9, size=0.1) +
-                    geom_col(aes(y=neg.mean), fill="#2171b5", color="#2171b5", alpha=.9, size=0.1) +
+                    geom_col(aes(y=pos.mean), fill="#114477", color="#114477", alpha=.9, size=0.1) +
+                    geom_col(aes(y=neg.mean), fill="#4477AA", color="#4477AA", alpha=.9, size=0.1) +
                     ggtitle(paste("mean", factor, "ChIP-nexus coverage"),
                             subtitle=paste(nindices, ylabel)) +
                     ylab("normalized counts")
@@ -73,8 +74,8 @@ protection_meta = function(df, factor, nindices, ylabel, upstream, downstream, r
     metagene_base = ggplot(data = df, aes(x=position)) +
         geom_vline(xintercept = 0, size=1, color="grey65") +
         geom_ribbon(aes(ymax=mean+1.96*sem, ymin=mean-1.96*sem),
-                    fill="#3f007d", alpha=0.4, size=0) +
-        geom_line(aes(y=mean), color="#3f007d") +
+                    fill="#114477", alpha=0.4, size=0) +
+        geom_line(aes(y=mean), color="#114477") +
         scale_y_continuous(limits=c(0, NA), name="normalized counts") +
         ggtitle(paste("mean", factor, "protection"),
                 subtitle = paste(nindices, ylabel))
@@ -94,6 +95,10 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
         mutate_at(vars(cpm.y), funs(-.)) %>% 
         mutate_at(vars(sample, group), funs(fct_inorder(., ordered=TRUE)))
     
+    repl_df = stranded %>% select(group, sample) %>% distinct() %>%
+        group_by(group) %>% mutate(replicate=row_number()) %>% ungroup() %>% 
+        select(-group)
+    
     nindices = max(stranded$index, na.rm=TRUE)
     nsamples = length(fct_unique(stranded$sample))
     ngroups = length(fct_unique(stranded$group))
@@ -101,17 +106,19 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
     sdf_group = stranded %>% group_by(group, position) %>%
         summarise(pos.mean = winsor.mean(cpm.x, trim=trim_pct, na.rm=TRUE),
                   neg.mean = winsor.mean(cpm.y, trim=trim_pct, na.rm=TRUE))
-    smeta_group = stranded_meta(sdf_group, factor=factor, nindices=nindices, ylabel=ylabel, upstream=upstream,
+    smeta_group = stranded_meta(sdf_group, factor=factor, nindices=nindices,
+                                ylabel=ylabel, upstream=upstream,
                                 downstream=downstream, refptlabel=refptlabel) +
         facet_wrap(~group, ncol=ngroups)
     ggsave(smeta_group_out, plot=smeta_group, height=8, width=7*ngroups, units="cm")
     
-    sdf_sample = stranded %>% group_by(sample, position) %>%
+    sdf_sample = stranded %>% left_join(repl_df, by="sample") %>%
+        group_by(group, sample, replicate, position) %>%
         summarise(pos.mean = winsor.mean(cpm.x, trim=trim_pct, na.rm=TRUE),
                   neg.mean = winsor.mean(cpm.y, trim=trim_pct, na.rm=TRUE))
     smeta_sample = stranded_meta(sdf_sample, factor=factor, nindices=nindices, ylabel=ylabel, upstream=upstream,
                                 downstream=downstream, refptlabel=refptlabel) +
-        facet_wrap(~sample, dir="v", ncol=ngroups) 
+        facet_grid(replicate~group) + theme(strip.text.y = element_text(angle=0))
     ggsave(smeta_sample_out, plot=smeta_sample, height=8+5*(nsamples/ngroups-1),
            width=7*ngroups, units="cm")
     
@@ -128,23 +135,23 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
         facet_wrap(~group, ncol=ngroups)
     ggsave(pmeta_group_out, plot=pmeta_group, height=8, width=7*ngroups, units="cm")
     
-    pdf_sample = protection %>% group_by(group, sample, position) %>%
+    pdf_sample = protection %>% left_join(repl_df, by="sample") %>% 
+        group_by(group, sample, replicate, position) %>%
         summarise(mean = winsor.mean(cpm, trim=trim_pct, na.rm=TRUE),
                   sd = winsor.sd(cpm, trim=trim_pct, na.rm=TRUE),
                   sem = winsor.sd(cpm, trim=trim_pct, na.rm=TRUE)/sqrt(n()))
     pmeta_sample = protection_meta(pdf_sample, factor=factor, nindices=nindices, ylabel=ylabel, upstream=upstream,
                                 downstream=downstream, refptlabel=refptlabel) +
-        facet_wrap(~sample, dir="v", ncol=ngroups)
+        facet_grid(replicate~group) + theme(strip.text.y = element_text(angle=0))
     ggsave(pmeta_sample_out, plot=pmeta_sample, height=8+5*(nsamples/ngroups-1),
            width=7*ngroups, units="cm")
     
     pmeta_goverlay = ggplot(data=pdf_group, aes(x=position, color=group, fill=group)) +
         geom_vline(xintercept = 0, size=1, color="grey65") +
         geom_ribbon(aes(ymax=mean+1.96*sem, ymin=mean-1.96*sem),
-                        alpha=0.2, size=0) +
+                        alpha=0.3, size=0) +
         geom_line(aes(y=mean)) +
-        scale_fill_brewer(palette="Set1", direction=-1) +
-        scale_color_brewer(palette="Set1", direction=-1) +
+        scale_fill_ptol() + scale_color_ptol() +
         scale_y_continuous(limits=c(0, NA),
                            name="normalized coverage") +
         ggtitle(paste("mean", factor, "protection"),
@@ -161,8 +168,7 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
         geom_ribbon(aes(ymax=mean+1.96*sem, ymin=mean-1.96*sem),
                         alpha=0.2, size=0) +
         geom_line(aes(y=mean)) +
-        scale_fill_brewer(palette="Set1", direction=-1) +
-        scale_color_brewer(palette="Set1", direction=-1) +
+        scale_fill_ptol() + scale_color_ptol() +
         scale_y_continuous(limits=c(0, NA),
                            name="normalized coverage") +
         ggtitle(paste("mean", factor, "protection"),
@@ -179,7 +185,7 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
               strip.placement="outside",
               strip.text.y=element_text(angle=180, hjust=1))
     ggsave(pmeta_soverlay_bygroup_out, plot=pmeta_soverlay_bygroup,
-           width=14, height=6+6*(nsamples/ngroups-1), units="cm")
+           width=14, height=2+5*(ngroups), units="cm")
 }
 
 main(intable.plus = snakemake@input[["plus"]],
