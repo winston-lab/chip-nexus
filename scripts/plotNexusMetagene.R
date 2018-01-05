@@ -118,7 +118,7 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
                   neg.mean = winsor.mean(cpm.y, trim=trim_pct, na.rm=TRUE))
     smeta_sample = stranded_meta(sdf_sample, factor=factor, nindices=nindices, ylabel=ylabel, upstream=upstream,
                                 downstream=downstream, refptlabel=refptlabel) +
-        facet_grid(replicate~group) + theme(strip.text.y = element_text(angle=0))
+        facet_grid(replicate~group)
     ggsave(smeta_sample_out, plot=smeta_sample, height=8+5*(nsamples/ngroups-1),
            width=7*ngroups, units="cm")
     
@@ -142,8 +142,8 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
                   sem = winsor.sd(cpm, trim=trim_pct, na.rm=TRUE)/sqrt(n()))
     pmeta_sample = protection_meta(pdf_sample, factor=factor, nindices=nindices, ylabel=ylabel, upstream=upstream,
                                 downstream=downstream, refptlabel=refptlabel) +
-        facet_grid(replicate~group) + theme(strip.text.y = element_text(angle=0))
-    ggsave(pmeta_sample_out, plot=pmeta_sample, height=8+5*(nsamples/ngroups-1),
+        facet_grid(replicate~group)
+    ggsave(pmeta_sample_out, plot=pmeta_sample, height=2+4.5*(max(repl_df$replicate)),
            width=7*ngroups, units="cm")
     
     pmeta_goverlay = ggplot(data=pdf_group, aes(x=position, color=group, fill=group)) +
@@ -185,7 +185,7 @@ main = function(intable.plus, intable.minus, intable.qfrags, samplelist, upstrea
               strip.placement="outside",
               strip.text.y=element_text(angle=180, hjust=1))
     ggsave(pmeta_soverlay_bygroup_out, plot=pmeta_soverlay_bygroup,
-           width=14, height=2+5*(ngroups), units="cm")
+           width=14, height=2+4.5*(ngroups), units="cm")
 }
 
 main(intable.plus = snakemake@input[["plus"]],
