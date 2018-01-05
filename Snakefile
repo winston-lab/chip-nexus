@@ -230,6 +230,7 @@ rule get_coverage:
 #         (Rscript peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
 #         (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
 #         """
+
 rule get_protection:
     input:
         tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
@@ -239,9 +240,9 @@ rule get_protection:
     wildcard_constraints:
         counttype="counts|sicounts"
     shell: """
-        genomeCoverageBed -bga -fs $(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | awk '{{sum+=$1; count++}}END{{print sum/count}}' | xargs printf "%.*f\n" 0) -ibam {input.bam} | LC_COLLATE=C sort -k1,1 -k2,2n > {output.coverage}
+        median_fragsize=$(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | sort -k1,1n | awk '{{count[NR]=$1;}} END{{if (NR % 2) {{print count[(NR+1)/2]}} else {{print (count[(NR/2)] + count[(NR/2)+1]) / 2.0;}} }}' | xargs printf "%.*f\n" 0)
+        genomeCoverageBed -bga -fs $median_fragsize -scale $(echo 1/$median_fragsize | bc -l) -ibam {input.bam} | LC_COLLATE=C sort -k1,1 -k2,2n > {output.coverage}
         """
-
 
 rule normalize:
     input:
