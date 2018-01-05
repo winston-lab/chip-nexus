@@ -32,12 +32,12 @@ rule all:
         #alignment
         expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES),
         #coverage
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags"]),
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","qfrags"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection"]),
         #initial QC
         expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
@@ -209,27 +209,39 @@ rule get_coverage:
         (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
         """
 
-#NOTE: requires Q to be in $PATH
-rule qnexus:
+# #NOTE: requires Q to be in $PATH
+# rule qnexus:
+#     input:
+#         lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] + "only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] + "only.bam"
+#     output:
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-narrowPeak.bed",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.R",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.pdf",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-quality-statistics.tab",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-runinfo.txt",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-summit-info.tab",
+#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-treatment.bedgraph",
+#         coverage = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-protection.bedgraph"
+#     wildcard_constraints:
+#         counttype="counts|sicounts"
+#     log: "logs/qnexus/qnexus-{sample}-{counttype}.log"
+#     shell: """
+#         (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
+#         (Rscript peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
+#         (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
+#         """
+rule get_protection:
     input:
-        lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] + "only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] + "only.bam"
+        tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
+        bam = lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] +"only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] +"only.bam"
     output:
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-narrowPeak.bed",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.R",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.pdf",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-quality-statistics.tab",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-runinfo.txt",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-summit-info.tab",
-        "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-treatment.bedgraph",
-        coverage = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-qfrags.bedgraph"
+        coverage = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-protection.bedgraph"
     wildcard_constraints:
         counttype="counts|sicounts"
-    log: "logs/qnexus/qnexus-{sample}-{counttype}.log"
     shell: """
-        (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
-        (Rscript peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
-        (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
+        genomeCoverageBed -bga -fs $(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | awk '{{sum+=$1; count++}}END{{print sum/count}}' | xargs printf "%.*f\n" 0) -ibam {input.bam} > {output.coverage}
         """
+
 
 rule normalize:
     input:
@@ -241,7 +253,7 @@ rule normalize:
         normalized = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph",
     wildcard_constraints:
         norm="libsizenorm|spikenorm",
-        strand="plus|minus|qfrags"
+        strand="plus|minus|protection"
     log: "logs/normalize/normalize-{sample}-{norm}-{strand}.log"
     shell: """
         (bash scripts/libsizenorm.sh {input.plmin} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
@@ -290,7 +302,7 @@ rule bedgraph_to_bigwig:
     output:
         "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     wildcard_constraints:
-        strand="plus|minus|qfrags|SENSE|ANTISENSE"
+        strand="plus|minus|protection|SENSE|ANTISENSE"
     shell: """
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
@@ -603,8 +615,6 @@ rule map_to_windows:
         chrsizes = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
     output:
         exp = temp("coverage/{norm}/{sample}_{factor}-window-{windowsize}-coverage-{norm}.bedgraph"),
-    # params:
-        # windowsize = config["corr-windowsize"]
     shell: """
         bedtools makewindows -g {input.chrsizes} -w {wildcards.windowsize} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.bg} -c 4 -o sum > {output.exp}
         """
@@ -625,7 +635,7 @@ rule plotcorrelations:
     input:
         "coverage/{norm}/union-bedgraph-window-{windowsize}-{norm}.tsv.gz"
     output:
-        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-window-{windowsize}-{norm}-correlations.svg"
+        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-{status}-window-{windowsize}-{norm}-correlations.svg"
     params:
         pcount = 0.1,
         samplelist = plotcorrsamples
@@ -634,7 +644,7 @@ rule plotcorrelations:
 
 rule deeptools_matrix:
     input:
-        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="qfrags" else os.path.dirname(config["annotations"][wildcards.annotation]["path"]) + "/stranded/" + wildcards.annotation + "-STRANDED" + os.path.splitext(config["annotations"][wildcards.annotation]["path"])[1],
+        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="protection" else os.path.dirname(config["annotations"][wildcards.annotation]["path"]) + "/stranded/" + wildcards.annotation + "-STRANDED" + os.path.splitext(config["annotations"][wildcards.annotation]["path"])[1],
         bw = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     output:
         dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}.mat.gz"),
@@ -680,7 +690,7 @@ rule cat_matrices:
 
 rule r_heatmaps:
     input:
-        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-qfrags.tsv.gz"
+        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
         heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bysample.svg",
         heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bygroup.svg",
@@ -702,7 +712,7 @@ rule r_metagenes:
     input:
         plus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-SENSE.tsv.gz",
         minus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-ANTISENSE.tsv.gz",
-        qfrags = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-qfrags.tsv.gz"
+        qfrags = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
         smeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-stranded-metagene-bygroup.svg",
         smeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-stranded-metagene-bysample.svg",
