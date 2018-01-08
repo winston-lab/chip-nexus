@@ -112,7 +112,7 @@ rule remove_molec_barcode:
     log: "logs/remove_molec_barcode/removeMBC-{sample}.log"
     shell: """
         (python scripts/extractNexusMolecularBarcode.py {input} fastq/cleaned/{wildcards.sample}-cleaned.fastq {output.barcodes} {output.ligation}) &> {log}
-        (pigz -f fastq/cleaned/{wildcards.sample}-clean.fastq) &>> {log}
+        (pigz -f fastq/cleaned/{wildcards.sample}-cleaned.fastq) &>> {log}
         """
 
 rule fastqc_processed:
