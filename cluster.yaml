@@ -21,10 +21,25 @@ remove_molec_barcode:
     n : 2
     mem : 2000
 
-fastqc_cleaned:
+fastqc_processed:
     time : 15 
     n : 1
     mem : 4000
+
+read_processing_numbers:
+    time: 5
+    n: 1
+    mem: 4000
+
+plot_read_processing:
+    time: 5
+    n: 1
+    mem: 4000
+
+plot_fastqc_summary:
+    time: 10
+    n: 1
+    mem: 8000
 
 bowtie2_build:
     time : 15 
