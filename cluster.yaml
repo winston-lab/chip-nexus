@@ -26,6 +26,11 @@ fastqc_processed:
     n : 1
     mem : 4000
 
+fastqc_aligned:
+    time : 15 
+    n : 1
+    mem : 4000
+
 read_processing_numbers:
     time: 5
     n: 1

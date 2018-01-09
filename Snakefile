@@ -115,7 +115,7 @@ rule remove_molec_barcode:
         (pigz -f fastq/cleaned/{wildcards.sample}-cleaned.fastq) &>> {log}
         """
 
-rule fastqc_processed:
+rule fastqc_cleaned:
     input:
         "fastq/{fqtype}/{sample}-{fqtype}.fastq.gz"
     params:
@@ -124,16 +124,34 @@ rule fastqc_processed:
         "qual_ctrl/fastqc/{fqtype}/{sample}-{fqtype}_fastqc/fastqc_data.txt",
     threads : config["threads"]
     log: "logs/fastqc/{fqtype}/fastqc-{fqtype}-{sample}.log"
+    wildcard_constraints:
+        fqtype = "cleaned|unaligned"
     shell: """
         (mkdir -p qual_ctrl/fastqc/{wildcards.fqtype}) &> {log}
         (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/{wildcards.fqtype} {input}) &>> {log}
+        """
+
+rule fastqc_aligned:
+    input:
+        "alignment/{sample}-noPCRdup.bam"
+    params:
+        adapter = config["cutadapt"]["adapter"]
+    output:
+        "qual_ctrl/fastqc/aligned_noPCRdup/{sample}-aligned_noPCRdup_fastqc/fastqc_data.txt",
+    threads : config["threads"]
+    log: "logs/fastqc/aligned_noPCRdup/fastqc-aligned_noPCRdup-{sample}.log"
+    shell: """
+        (mkdir -p qual_ctrl/fastqc/aligned_noPCRdup) &> {log}
+        (bedtools bamtofastq -fq qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq -i {input}) &>> {log}
+        (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/aligned_noPCRdup qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq) &>> {log}
+        (rm qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq) &>> {log}
         """
 
 rule fastqc_aggregate:
     input:
         raw = expand("qual_ctrl/fastqc/raw/{sample}/{fname}/fastqc_data.txt", zip, sample=SAMPLES, fname=[os.path.split(v["fastq"])[1].split(".fastq")[0] + "_fastqc" for k,v in SAMPLES.items()]),
         cleaned = expand("qual_ctrl/fastqc/cleaned/{sample}-cleaned_fastqc/fastqc_data.txt", sample=SAMPLES),
-        aligned = expand("qual_ctrl/fastqc/aligned/{sample}-aligned_fastqc/fastqc_data.txt", sample=SAMPLES),
+        aligned_noPCRdup = expand("qual_ctrl/fastqc/aligned_noPCRdup/{sample}-aligned_noPCRdup_fastqc/fastqc_data.txt", sample=SAMPLES),
         unaligned = expand("qual_ctrl/fastqc/unaligned/{sample}-unaligned_fastqc/fastqc_data.txt", sample=SAMPLES),
     output:
         'qual_ctrl/fastqc/per_base_quality.tsv',
@@ -152,7 +170,7 @@ rule fastqc_aggregate:
         for outpath, stat, header in zip(output, ["Per base sequence quality", "Per tile sequence quality", "Per sequence quality scores", "Per base sequence content", "Per sequence GC content", "Per base N content", "Sequence Length Distribution", "Total Deduplicated Percentage", "Adapter Content", "Kmer Content"], ["base\tmean\tmedian\tlower_quartile\tupper_quartile\tten_pct\tninety_pct\tsample\tstatus", "tile\tbase\tmean\tsample\tstatus",
         "quality\tcount\tsample\tstatus", "base\tg\ta\tt\tc\tsample\tstatus", "gc_content\tcount\tsample\tstatus", "base\tn_count\tsample\tstatus", "length\tcount\tsample\tstatus", "duplication_level\tpct_of_deduplicated\tpct_of_total\tsample\tstatus", "position\tpct\tsample\tstatus",
         "sequence\tcount\tpval\tobs_over_exp_max\tmax_position\tsample\tstatus" ]):
-            for input_type in ["raw", "cleaned", "aligned", "unaligned"]:
+            for input_type in ["raw", "cleaned", "aligned_noPCRdup", "unaligned"]:
                 for sample_id, fqc in zip(SAMPLES.keys(), input[input_type]):
                     shell("""awk -v sample_id={sample_id} -v input_type={input_type} 'BEGIN{{FS=OFS="\t"}} /{stat}/{{flag=1;next}}/>>END_MODULE/{{flag=0}} flag {{print $0, sample_id, input_type}}' {fqc} | tail -n +2 >> {outpath}""")
             shell("""sed -i "1i {header}" {outpath}""")
@@ -234,7 +252,7 @@ rule read_processing_numbers:
         shell("""(echo -e "sample\traw\tcleaned\tmapped\tunique_map\tnoPCRdup" > {output}) &> {log}""")
         for sample, adapter, align, nodups in zip(SAMPLES.keys(), input.adapter, input.align, input.nodups):
             shell("""(grep -e "Total reads processed:" -e "Reads written" {adapter} | cut -d: -f2 | sed 's/,//g' | awk 'BEGIN{{ORS="\t"; print "{sample}"}}{{print $1}}' >> {output}) &> {log}""")
-            shell("""(grep -e "aligned 0 times" -e "aligned exactly 1 time" | awk 'BEGIN{{ORS="\t"}} {{print $1}}' {align} >> {output}) &> {log}""")
+            shell("""(grep -e "aligned 0 times" -e "aligned exactly 1 time" {align} | awk 'BEGIN{{ORS="\t"}} {{print $1}}' >> {output}) &> {log}""")
             shell("""(samtools view -c {nodups} | awk '{{print $1}}' >> {output}) &> {log}""")
         shell("""(awk 'BEGIN{{FS=OFS="\t"}} NR==1; NR>1{{$4=$3-$4; print $0}}' {output} > qual_ctrl/.readnumbers.temp; mv qual_ctrl/.readnumbers.temp {output}) &> {log}""")
 
