@@ -24,7 +24,8 @@ localrules:
     classify_peaks_genic, classify_peaks_intragenic, classify_peaks_intergenic,
     separate_de_peaks,
     get_de_genic, get_de_intragenic, get_de_intergenic,
-    de_peaks_to_bed, separate_sig_de, get_de_category_bed
+    de_peaks_to_bed, separate_sig_de, get_de_category_bed,
+    cat_matrices
 
 rule all:
     input:
@@ -46,10 +47,10 @@ rule all:
         expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}-stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}-stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
@@ -744,16 +745,16 @@ rule plotcorrelations:
     script:
         "scripts/plotcorr.R"
 
-rule deeptools_matrix:
+rule compute_matrix:
     input:
         annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="protection" else os.path.dirname(config["annotations"][wildcards.annotation]["path"]) + "/stranded/" + wildcards.annotation + "-STRANDED" + os.path.splitext(config["annotations"][wildcards.annotation]["path"])[1],
         bw = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     output:
-        dtfile = temp("datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}.mat.gz"),
-        matrix = temp("datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}.tsv"),
-        matrix_gz = "datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}.tsv.gz",
+        dtfile = temp("datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.mat.gz"),
+        matrix = temp("datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.tsv"),
+        melted = "datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz",
     params:
-        refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
+        group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
         upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"] + config["annotations"][wildcards.annotation]["binsize"],
         dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"] + config["annotations"][wildcards.annotation]["binsize"],
         binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
@@ -761,43 +762,40 @@ rule deeptools_matrix:
         sortusing = lambda wildcards: config["annotations"][wildcards.annotation]["sortby"],
         binstat = lambda wildcards: config["annotations"][wildcards.annotation]["binstat"]
     threads : config["threads"]
-    log: "logs/deeptools/computeMatrix-{annotation}-{sample}_{factor}-{norm}.log"
+    log: "logs/compute_matrix/compute_matrix-{annotation}_{sample}_{factor}-{norm}-{strand}.log"
     run:
-        if config["annotations"][wildcards.annotation]["nan_afterend"]=="y":
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --nanAfterEnd --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}; pigz -fk {output.matrix}) &> {log}")
+        if config["annotations"][wildcards.annotation]["type"]=="absolute":
+            refpoint = config["annotations"][wildcards.annotation]["refpoint"]
+            if config["annotations"][wildcards.annotation]["nan_afterend"]=="y":
+                shell("""(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --nanAfterEnd --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
+            else:
+                shell("""(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
         else:
-            shell("(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}; pigz -fk {output.matrix}) &> {log}")
-
-rule melt_matrix:
-    input:
-        matrix = "datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}.tsv.gz"
-    output:
-        temp("datavis/{annotation}/{norm}/{annotation}-{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz")
-    params:
-        refpoint = lambda wildcards: config["annotations"][wildcards.annotation]["refpoint"],
-        group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
-        binsize = lambda wildcards : config["annotations"][wildcards.annotation]["binsize"],
-        upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
-    script:
-        "scripts/melt_matrix.R"
+            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
+            refpoint = "TSS"
+            shell("""(computeMatrix scale-regions -R {input.annotation} -S {input.bw} -out {output.dtfile} --outFileNameMatrix {output.matrix} -m {scaled_length} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
+        melt_upstream = params.upstream-params.binsize
+        shell("""(Rscript scripts/melt_matrix.R -i {output.matrix} -r {refpoint} --group {params.group} -s {wildcards.sample} -b {params.binsize} -u {melt_upstream} -o {output.melted}) &>> {log}""")
 
 rule cat_matrices:
     input:
-        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}-{sample}_{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
+        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}_{sample}_{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
     output:
         "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
+    log: "logs/cat_matrices/cat_matrices-{annotation}_{norm}-{strand}.log"
     shell: """
-        cat {input} > {output}
+        (cat {input} > {output}) &> {log}
         """
 
-rule r_heatmaps:
+rule plot_heatmaps:
     input:
         matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
-        heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bysample.svg",
-        heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-heatmap-bygroup.svg",
+        heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bysample.svg",
+        heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bygroup.svg",
     params:
         samplelist = plotcorrsamples,
+        mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
         dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
         pct_cutoff = lambda wildcards : config["annotations"][wildcards.annotation]["pct_cutoff"],
@@ -805,31 +803,45 @@ rule r_heatmaps:
         nclust = lambda wildcards: config["annotations"][wildcards.annotation]["nclusters"],
         heatmap_cmap = lambda wildcards : config["annotations"][wildcards.annotation]["heatmap_colormap"],
         refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
-        factor = config["factor"],
         ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
-    script:
-        "scripts/plotHeatmaps.R"
+    run:
+        if config["annotations"][wildcards.annotation]["type"]=="scaled":
+            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
+            endlabel = config["annotations"][wildcards.annotation]["three_prime_label"]
+        else:
+            scaled_length=0
+            endlabel = "HAIL SATAN!"
+        shell("""Rscript scripts/plot_nexus_heatmaps.R -i {input.matrix} -s {params.samplelist} -t {params.mtype} -u {params.upstream} -d {params.dnstream} -c {params.pct_cutoff} -z {params.cluster} -k {params.nclust} -r {params.refpointlabel} -f {wildcards.factor} -l {scaled_length} -e {endlabel} -y {params.ylabel} -m {params.heatmap_cmap} -o {output.heatmap_sample} -p {output.heatmap_group}""")
 
-rule r_metagenes:
+rule plot_metagenes:
     input:
         plus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-SENSE.tsv.gz",
         minus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-ANTISENSE.tsv.gz",
-        qfrags = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
+        protection = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
-        smeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-stranded-metagene-bygroup.svg",
-        smeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-stranded-metagene-bysample.svg",
-        pmeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-protection-metagene-bygroup.svg",
-        pmeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-protection-metagene-bysample.svg",
-        pmeta_goverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-protection-metagene-overlay-group.svg",
-        pmeta_soverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-protection-metagene-overlay-sample.svg",
-        pmeta_soverlay_bygroup = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}-protection-metagene-overlay-sample-bygroup.svg",
+        smeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bygroup.svg",
+        smeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bysample.svg",
+        pmeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bygroup.svg",
+        pmeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bysample.svg",
+        pmeta_goverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-group.svg",
+        pmeta_soverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample.svg",
+        pmeta_soverlay_bygroup = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample-bygroup.svg",
+        meta_heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bygroup.svg",
+        meta_heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bysample.svg",
     params:
         samplelist = plotcorrsamples,
+        mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
         upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
         dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
         trim_pct = lambda wildcards : config["annotations"][wildcards.annotation]["trim_pct"],
         refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
         factor = config["factor"],
         ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
-    script:
-        "scripts/plotNexusMetagene.R"
+    run:
+        if config["annotations"][wildcards.annotation]["type"]=="scaled":
+            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
+            endlabel = config["annotations"][wildcards.annotation]["three_prime_label"]
+        else:
+            scaled_length=0
+            endlabel = "HAIL SATAN!"
+        shell("""Rscript scripts/plot_nexus_metagenes.R --inplus {input.plus} --inminus {input.minus} --inprotection {input.protection} -s {params.samplelist} -t {params.mtype} -u {params.upstream} -d {params.dnstream} -p {params.trim_pct} -r {params.refpointlabel} -f {wildcards.factor} -l {scaled_length} -e {endlabel} -y {params.ylabel} --out1 {output.smeta_group} --out2 {output.smeta_sample} --out3 {output.pmeta_group} --out4 {output.pmeta_sample} --out5 {output.pmeta_goverlay} --out6 {output.pmeta_soverlay} --out7 {output.pmeta_soverlay_bygroup} --out8 {output.meta_heatmap_group} --out9 {output.meta_heatmap_sample}""")
