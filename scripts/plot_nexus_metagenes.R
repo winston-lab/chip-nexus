@@ -68,7 +68,7 @@ theme_default = theme_light() +
 main = function(intable_plus, intable_minus, intable_protection, samplelist, type, upstream, dnstream,
                 trim_pct, refptlabel, factor, scaled_length, endlabel, ylabel, smeta_group_out, smeta_sample_out,
                 pmeta_group_out, pmeta_sample_out, pmeta_goverlay_out,
-                pmeta_soverlay_out, pmeta_soverlay_bygroup_out){
+                pmeta_soverlay_out, pmeta_soverlay_bygroup_out, meta_heatmap_group_out, meta_heatmap_sample_out){
     x_label = function(ggp){
         if(type=="absolute"){
             ggp = ggp +
