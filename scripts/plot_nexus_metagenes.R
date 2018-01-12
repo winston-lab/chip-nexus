@@ -137,7 +137,13 @@ main = function(intable_plus, intable_minus, intable_protection, samplelist, typ
             scale_y_continuous(breaks=0,expand=c(0,0), name=NULL) +
             ggtitle(paste("mean", factor, "protection"),
                     subtitle = paste(nindices, ylabel)) +
-            theme_default
+            theme_default +
+            theme(axis.text.y = element_blank(),
+                  strip.text.y = element_text(hjust=1, angle=-180),
+                  legend.title = element_text(size=10, face="plain"),
+                  axis.ticks.x = element_line(color="black", size=1),
+                  axis.ticks.y = element_blank(),
+                  panel.border = element_blank())
         return(x_label(metagene_base))
     }
 
