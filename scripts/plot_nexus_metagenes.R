@@ -3,6 +3,7 @@ library(argparse)
 library(psych)
 library(tidyverse)
 library(forcats)
+library(viridis)
 library(ggthemes)
 
 parser = ArgumentParser()
