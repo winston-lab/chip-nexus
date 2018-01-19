@@ -92,7 +92,7 @@ main = function(intable, samplelist, type, upstream, dnstream, pct_cutoff,
     ngroups = length(fct_unique(raw$group))
 
     #clustering
-    if (cluster=="yes"){
+    if (cluster=="True"){
         #first k-means clustering on NOTE: unscaled data
         rr = raw %>% select(-group) %>% unite(cid, c(sample, position), sep="~") %>%
                 spread(cid, cpm, fill=0) %>% select(-index)

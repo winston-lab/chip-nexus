@@ -63,6 +63,10 @@ get_coverage:
     time : 10 
     mem : 2000
 
+get_protection:
+    time : 10 
+    mem : 2000
+
 normalize:
     time : 5 
     mem : 2000

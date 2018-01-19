@@ -740,7 +740,7 @@ rule plotcorrelations:
     output:
         "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-{status}-window-{windowsize}-{norm}-correlations.svg"
     params:
-        pcount = 0.1,
+        pcount = lambda wildcards: 0.1*int(wildcards.windowsize),
         samplelist = plotcorrsamples
     script:
         "scripts/plotcorr.R"
