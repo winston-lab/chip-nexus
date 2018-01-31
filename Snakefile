@@ -305,8 +305,8 @@ rule get_coverage:
     wildcard_constraints:
         counttype="counts|sicounts"
     log: "logs/get_coverage/get_coverage-{sample}-{counttype}.log"
-    shell: """
         # (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &> {log}
+    shell: """
         (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
         (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
         """
