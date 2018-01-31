@@ -349,7 +349,7 @@ rule get_protection:
 rule get_midpoint_coverage:
     input:
         tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
-        chrsizes = config["genome"]["chrsizes"],
+        chrsizes = lambda wildcards: config["genome"]["chrsizes"] if wildcards.counttype="counts" else config["genome"]["si-chrsizes"],
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph"
     output:
