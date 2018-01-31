@@ -34,8 +34,8 @@ rule all:
         #alignment
         expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES),
         #coverage
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection"]),
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
         #initial QC
         "qual_ctrl/read_processing-loss.svg",
         expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
@@ -299,14 +299,14 @@ rule get_coverage:
     params:
         prefix = lambda wildcards: config["combinedgenome"]["experimental_prefix"] if wildcards.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
     output:
-        plmin = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-combined.bedgraph",
+        # plmin = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-combined.bedgraph",
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph",
     wildcard_constraints:
         counttype="counts|sicounts"
     log: "logs/get_coverage/get_coverage-{sample}-{counttype}.log"
     shell: """
-        (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &> {log}
+        # (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &> {log}
         (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
         (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
         """
@@ -346,20 +346,35 @@ rule get_protection:
         genomeCoverageBed -bga -fs $median_fragsize -scale $(echo 1/$median_fragsize | bc -l) -ibam {input.bam} | LC_COLLATE=C sort -k1,1 -k2,2n > {output.coverage}
         """
 
+rule get_midpoint_coverage:
+    input:
+        tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
+        chrsizes = config["genome"]["chrsizes"],
+        plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
+        minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph"
+    output:
+        "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-midpoints.bedgraph"
+    wildcard_constraints:
+        counttype="counts|sicounts"
+    shell: """
+        half_median_fragsize=$(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | sort -k1,1n | awk '{{count[NR]=$1;}} END{{if (NR % 2) {{print count[(NR+1)/2]/2.0}} else {{print (count[(NR/2)] + count[(NR/2)+1]) / 4.0;}} }}' | xargs printf "%.*f\n" 0)
+        bedtools unionbedg -i <(bedtools shift -i {input.plus} -g {input.chrsizes} -s $half_median_fragsize) <(bedtools shift -i {input.minus} -g {input.chrsizes} -s -$half_median_fragsize) -g {input.chrsizes} -empty | awk 'BEGIN{{FS=OFS="\t"}}{{print $1, $2, $3, $4+$5}}' > {output}
+        """
+
 rule normalize:
     input:
         counts = "coverage/counts/{sample}_{factor}-chipnexus-counts-{strand}.bedgraph",
-        plmin = lambda wildcards: "coverage/counts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-counts-combined.bedgraph" if wildcards.norm=="libsizenorm" else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-combined.bedgraph"
+        midpoints = lambda wildcards: "coverage/counts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-counts-midpoints.bedgraph" if wildcards.norm=="libsizenorm" else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-midpoints.bedgraph"
     params:
         scalefactor = lambda wildcards: config["spikein-pct"] if wildcards.norm=="spikenorm" else 1
     output:
         normalized = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph",
     wildcard_constraints:
         norm="libsizenorm|spikenorm",
-        strand="plus|minus|protection"
+        strand="plus|minus|protection|midpoints"
     log: "logs/normalize/normalize-{sample}-{norm}-{strand}.log"
     shell: """
-        (bash scripts/libsizenorm.sh {input.plmin} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
+        (bash scripts/libsizenorm.sh {input.midpoints} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
         """
 
 rule macs2:
@@ -405,15 +420,15 @@ rule bedgraph_to_bigwig:
     output:
         "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     wildcard_constraints:
-        strand="plus|minus|protection|SENSE|ANTISENSE"
+        strand="plus|minus|midpoints|protection|SENSE|ANTISENSE"
     shell: """
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
 
 rule get_si_pct:
     input:
-        plmin = "coverage/counts/{sample}_{factor}-chipnexus-counts-combined.bedgraph",
-        SIplmin = "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-combined.bedgraph"
+        plmin = "coverage/counts/{sample}_{factor}-chipnexus-counts-midpoints.bedgraph",
+        SIplmin = "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-midpoints.bedgraph"
     output:
         temp("qual_ctrl/all/{sample}_{factor}-spikeincounts.tsv")
     params:
@@ -537,7 +552,7 @@ rule combine_peaks:
 rule map_counts_to_peaks:
     input:
         bed = "peakcalling/macs/allpeaks-{species}.bed",
-        bg = lambda wildcards: "coverage/counts/" + wildcards.sample +"_"+ wildcards.factor+"-chipnexus-counts-combined.bedgraph" if wildcards.species==config["combinedgenome"]["experimental_prefix"] else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-combined.bedgraph"
+        bg = lambda wildcards: "coverage/counts/" + wildcards.sample +"_"+ wildcards.factor+"-chipnexus-counts-midpoints.bedgraph" if wildcards.species==config["combinedgenome"]["experimental_prefix"] else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-midpoints.bedgraph"
     output:
         temp("coverage/counts/{sample}_{factor}-{species}-peak-counts.tsv")
     shell: """
