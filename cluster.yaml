@@ -140,3 +140,11 @@ map_counts_to_peaks:
 summarise_db_results:
     time: 15
     mem : 6000
+
+ratio_counts:
+    time: 10
+    mem: 4000
+
+plot_ratios:
+    time: 20
+    mem: 6000

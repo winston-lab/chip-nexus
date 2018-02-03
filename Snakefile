@@ -25,7 +25,8 @@ localrules:
     separate_de_peaks,
     get_de_genic, get_de_intragenic, get_de_intergenic,
     de_peaks_to_bed, separate_sig_de, get_de_category_bed,
-    cat_matrices
+    cat_matrices,
+    make_ratio_annotation, cat_ratio_counts
 
 rule all:
     input:
