@@ -48,7 +48,7 @@ main = function(in_numerator, in_denominator, factorname, samplelist, num_size, 
         scale_color_ptol(name=NULL) +
         xlab(bquote(bold(log[2] ~ frac(.(nlabel),.(dlabel))))) +
         ylab("cumulative probability") +
-        ggtitle(paste0("eCDF of ", factor, " ChIP-nexus \"", rlabel, "\""),
+        ggtitle(paste0("eCDF of ", factorname, " ChIP-nexus \"", rlabel, "\""),
                 subtitle = paste0(n_anno," ",alabel, " >", (num_size+den_size)/1000, "kb")) +
         theme_default +
         theme(legend.position = c(0.025,0.95),
