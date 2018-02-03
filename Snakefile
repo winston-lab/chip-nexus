@@ -61,7 +61,8 @@ rule all:
         expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
         #DB summary
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"])
+        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
+        expand(expand("ratios/{{ratio}}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
 def plotcorrsamples(wildcards):
     dd = SAMPLES if wildcards.status=="all" else PASSING
@@ -860,3 +861,71 @@ rule plot_metagenes:
             scaled_length=0
             endlabel = "HAIL SATAN!"
         shell("""Rscript scripts/plot_nexus_metagenes.R --inplus {input.plus} --inminus {input.minus} --inprotection {input.protection} -s {params.samplelist} -t {params.mtype} -u {params.upstream} -d {params.dnstream} -p {params.trim_pct} -r {params.refpointlabel} -f {wildcards.factor} -l {scaled_length} -e {endlabel} -y {params.ylabel} --out1 {output.smeta_group} --out2 {output.smeta_sample} --out3 {output.pmeta_group} --out4 {output.pmeta_sample} --out5 {output.pmeta_goverlay} --out6 {output.pmeta_soverlay} --out7 {output.pmeta_soverlay_bygroup} --out8 {output.meta_heatmap_group} --out9 {output.meta_heatmap_sample}""")
+
+rule make_ratio_annotation:
+    input:
+        lambda wildcards: config["ratios"][wildcards.ratio]["path"]
+    params:
+        totalsize = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["upstream"] + config["ratios"][wildcards.ratio]["numerator"]["dnstream"] + config["ratios"][wildcards.ratio]["denominator"]["upstream"] + config["ratios"][wildcards.ratio]["denominator"]["dnstream"],
+    output:
+        "ratios/{ratio}/{ratio}.bed"
+    log: "logs/make_ratio_annotation/make_ratio_annotation-{ratio}.log"
+    shell:  """
+        (awk 'BEGIN{{FS=OFS="\t"}} ($3-$2)>={params.totalsize}' {input} > {output}) &> {log}
+        """
+
+rule ratio_counts:
+    input:
+        annotation = "ratios/{ratio}/{ratio}.bed",
+        bw = "coverage/libsizenorm/{sample}_" + config["factor"] + "-chipnexus-libsizenorm-midpoints.bw"
+    output:
+        dtfile = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.mat.gz"),
+        matrix = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.tsv"),
+        melted = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}-melted.tsv.gz"),
+    params:
+        group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
+        upstream = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["upstream"],
+        dnstream = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["dnstream"],
+        refpoint = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["refpoint"]
+    threads: config["threads"]
+    log: "logs/ratio_counts/ratio_counts-{ratio}-{fractype}-{sample}.log"
+    shell: """
+        (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize $(echo {params.upstream} + {params.dnstream} | bc) --averageTypeBins sum -p {threads}) &> {log}
+        (Rscript scripts/melt_matrix.R -i {output.matrix} -r TSS --group {params.group} -s {wildcards.sample} -b $(echo {params.upstream} + {params.dnstream} | bc) -u {params.upstream} -o {output.melted}) &>> {log}
+        """
+
+rule cat_ratio_counts:
+    input:
+        expand("ratios/{{ratio}}/{{ratio}}_{{fractype}}_{sample}-melted.tsv.gz", sample=SAMPLES)
+    output:
+        "ratios/{ratio}/allsamples_{ratio}_{fractype}.tsv.gz"
+    log: "logs/cat_ratio_counts/cat_ratio_counts-{ratio}-{fractype}.log"
+    shell: """
+        (cat {input} > {output}) &> {log}
+        """
+
+def ratiosamples(wildcards):
+    dd = SAMPLES if wildcards.status=="all" else PASSING
+    if wildcards.condition=="all":
+        return list(dd.keys())
+    else:
+        return [k for k,v in dd.items() if v["group"]==wildcards.control or v["group"]==wildcards.condition]
+
+rule plot_ratios:
+    input:
+        numerator = "ratios/{ratio}/allsamples_{ratio}_numerator.tsv.gz",
+        denominator = "ratios/{ratio}/allsamples_{ratio}_denominator.tsv.gz",
+    output:
+        violin = "ratios/{ratio}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
+        ecdf = "ratios/{ratio}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
+    params:
+        num_size = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["upstream"] + config["ratios"][wildcards.ratio]["numerator"]["dnstream"],
+        den_size = lambda wildcards: config["ratios"][wildcards.ratio]["denominator"]["upstream"] + config["ratios"][wildcards.ratio]["denominator"]["dnstream"],
+        pcount = 1e-3,
+        samplelist = ratiosamples,
+        ratio_label = lambda wildcards: config["ratios"][wildcards.ratio]["ratio_name"],
+        num_label = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["region_label"],
+        den_label = lambda wildcards: config["ratios"][wildcards.ratio]["denominator"]["region_label"],
+        annotation_label = lambda wildcards: config["ratios"][wildcards.ratio]["label"]
+    script:
+        "scripts/ratio.R"
