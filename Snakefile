@@ -40,18 +40,18 @@ rule all:
         #initial QC
         "qual_ctrl/read_processing-loss.svg",
         expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         #macs2
         expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
         #categorise peaks
         expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/libsizenorm/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
@@ -63,7 +63,7 @@ rule all:
         #DB summary
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
-        expand(expand("ratios/{{ratio}}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
+        expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
 def plotcorrsamples(wildcards):
     dd = SAMPLES if wildcards.status=="all" else PASSING
@@ -755,7 +755,7 @@ rule plotcorrelations:
     input:
         "coverage/{norm}/union-bedgraph-window-{windowsize}-{norm}.tsv.gz"
     output:
-        "qual_ctrl/{status}/{condition}-v-{control}-{factor}-chipnexus-{status}-window-{windowsize}-{norm}-correlations.svg"
+        "qual_ctrl/{status}/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{status}-window-{windowsize}-{norm}-correlations.svg"
     params:
         pcount = lambda wildcards: 0.01*int(wildcards.windowsize),
         samplelist = plotcorrsamples
@@ -808,8 +808,8 @@ rule plot_heatmaps:
     input:
         matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
-        heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bysample.svg",
-        heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bygroup.svg",
+        heatmap_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bysample.svg",
+        heatmap_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bygroup.svg",
     params:
         samplelist = plotcorrsamples,
         mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
@@ -836,15 +836,15 @@ rule plot_metagenes:
         minus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-ANTISENSE.tsv.gz",
         protection = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
     output:
-        smeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bygroup.svg",
-        smeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bysample.svg",
-        pmeta_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bygroup.svg",
-        pmeta_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bysample.svg",
-        pmeta_goverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-group.svg",
-        pmeta_soverlay = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample.svg",
-        pmeta_soverlay_bygroup = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample-bygroup.svg",
-        meta_heatmap_group = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bygroup.svg",
-        meta_heatmap_sample = "datavis/{annotation}/{norm}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bysample.svg",
+        smeta_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bygroup.svg",
+        smeta_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bysample.svg",
+        pmeta_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bygroup.svg",
+        pmeta_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bysample.svg",
+        pmeta_goverlay = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-group.svg",
+        pmeta_soverlay = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample.svg",
+        pmeta_soverlay_bygroup = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample-bygroup.svg",
+        meta_heatmap_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bygroup.svg",
+        meta_heatmap_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bysample.svg",
     params:
         samplelist = plotcorrsamples,
         mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
@@ -917,8 +917,8 @@ rule plot_ratios:
         numerator = "ratios/{ratio}/allsamples_{ratio}_numerator.tsv.gz",
         denominator = "ratios/{ratio}/allsamples_{ratio}_denominator.tsv.gz",
     output:
-        violin = "ratios/{ratio}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
-        ecdf = "ratios/{ratio}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
+        violin = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
+        ecdf = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
     params:
         num_size = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["upstream"] + config["ratios"][wildcards.ratio]["numerator"]["dnstream"],
         den_size = lambda wildcards: config["ratios"][wildcards.ratio]["denominator"]["upstream"] + config["ratios"][wildcards.ratio]["denominator"]["dnstream"],
