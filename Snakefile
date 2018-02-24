@@ -15,6 +15,8 @@ conditiongroups_si = config["comparisons"]["spikenorm"]["conditions"]
 
 CATEGORIES = ["genic", "intragenic", "intergenic"]
 
+FIGURES = config["figures"]
+
 localrules:
     all,
     fastqc_aggregate,
@@ -48,10 +50,12 @@ rule all:
         expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
+        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
+        # expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        # expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        # expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
+        # expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
@@ -65,21 +69,34 @@ rule all:
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
-def plotcorrsamples(wildcards):
-    dd = SAMPLES if wildcards.status=="all" else PASSING
-    if wildcards.condition=="all":
-        if wildcards.norm=="libsizenorm": #condition==all,norm==lib
+def plotcorrsamples(wc):
+    dd = SAMPLES if wc.status=="all" else PASSING
+    if wc.condition=="all":
+        if wc.norm=="libsizenorm": #condition==all,norm==lib
             return list(dd.keys())
         else: #condition==all,norm==spike
             return list({k:v for (k,v) in dd.items() if v["spikein"]=="y"}.keys())
-    elif wildcards.norm=="libsizenorm": #condition!=all;norm==lib
-        return list({k:v for (k,v) in dd.items() if v["group"]==wildcards.control or v["group"]==wildcards.condition}.keys())
+    elif wc.norm=="libsizenorm": #condition!=all;norm==lib
+        return list({k:v for (k,v) in dd.items() if v["group"]==wc.control or v["group"]==wc.condition}.keys())
     else: #condition!=all;norm==spike
-        return list({k:v for (k,v) in dd.items() if (v["group"]==wildcards.control or v["group"]==wildcards.condition) and v["spikein"]=="y"}.keys())
+        return list({k:v for (k,v) in dd.items() if (v["group"]==wc.control or v["group"]==wc.condition) and v["spikein"]=="y"}.keys())
+
+def cluster_samples(status, norm, cluster_groups, cluster_strands):
+    ll = []
+    dd = SAMPLES if status=="all" else PASSING
+    for group, strand in zip(cluster_groups, cluster_strands):
+        sublist = [k for k,v in dd.items() if v["group"]==group] if norm=="libsizenorm" else [k for k,v in dd.items() if v["group"]==group and v["spikein"]=="y"]
+        if strand=="protection":
+            ll.append([sample + "-" + "protection" for sample in sublist])
+        if strand in ["sense", "both"]:
+            ll.append([sample + "-" + "sense" for sample in sublist])
+        if strand in ["antisense", "both"]:
+            ll.append([sample + "-" + "antisense" for sample in sublist])
+    return(list(itertools.chain(*ll)))
 
 rule fastqc_raw:
     input:
-        lambda wildcards: SAMPLES[wildcards.sample]["fastq"]
+        lambda wc: SAMPLES[wc.sample]["fastq"]
     params:
         adapter = config["cutadapt"]["adapter"]
     output:
@@ -93,7 +110,7 @@ rule fastqc_raw:
 
 rule remove_adapter:
     input:
-        lambda wildcards: SAMPLES[wildcards.sample]["fastq"]
+        lambda wc: SAMPLES[wc.sample]["fastq"]
     output:
         fq = temp("fastq/cleaned/{sample}-noadapter.fastq"),
         log =  "logs/remove_adapter/remove_adapter-{sample}.log"
@@ -189,7 +206,7 @@ rule plot_fastqc_summary:
         per_seq_qual = 'qual_ctrl/fastqc/per_sequence_quality.tsv',
         adapter_content = 'qual_ctrl/fastqc/adapter_content.tsv',
         seq_dup = 'qual_ctrl/fastqc/sequence_duplication_levels.tsv',
-        kmer = 'qual_ctrl/fastqc/kmer_content.tsv'
+        # kmer = 'qual_ctrl/fastqc/kmer_content.tsv'
     output:
         seq_len_dist = 'qual_ctrl/fastqc/sequence_length_distribution.svg',
         per_tile = 'qual_ctrl/fastqc/per_tile_quality.svg',
@@ -199,7 +216,7 @@ rule plot_fastqc_summary:
         per_seq_qual = 'qual_ctrl/fastqc/per_sequence_quality.svg',
         adapter_content = 'qual_ctrl/fastqc/adapter_content.svg',
         seq_dup = 'qual_ctrl/fastqc/sequence_duplication_levels.svg',
-        kmer = 'qual_ctrl/fastqc/kmer_content.svg',
+        # kmer = 'qual_ctrl/fastqc/kmer_content.svg',
     script: "scripts/fastqc_summary.R"
 
 rule bowtie2_build:
@@ -286,7 +303,7 @@ rule bam_separate_species:
         bai = "alignment/{sample}-noPCRdup.bam.bai",
         chrsizes = config["combinedgenome"]["chrsizes"]
     params:
-        filterprefix = lambda wildcards: config["combinedgenome"]["spikein_prefix"] if wildcards.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["experimental_prefix"],
+        filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["experimental_prefix"],
     output:
         "alignment/{sample}-{species}only.bam"
     threads: config["threads"]
@@ -299,7 +316,7 @@ rule get_coverage:
     input:
         "alignment/{sample}-noPCRdup.bam"
     params:
-        prefix = lambda wildcards: config["combinedgenome"]["experimental_prefix"] if wildcards.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
+        prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
     output:
         # plmin = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-combined.bedgraph",
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
@@ -313,32 +330,10 @@ rule get_coverage:
         (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
         """
 
-# #NOTE: requires Q to be in $PATH
-# rule qnexus:
-#     input:
-#         lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] + "only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] + "only.bam"
-#     output:
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-narrowPeak.bed",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.R",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-qfrag-binding-characteristics.pdf",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-quality-statistics.tab",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-runinfo.txt",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-summit-info.tab",
-#         "peakcalling/qnexus/{sample}_{factor}-{counttype}-Q-treatment.bedgraph",
-#         coverage = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-protection.bedgraph"
-#     wildcard_constraints:
-#         counttype="counts|sicounts"
-#     log: "logs/qnexus/qnexus-{sample}-{counttype}.log"
-#     shell: """
-#         (Q --nexus-mode -t {input} -o peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype} -v -wbt) &> {log}
-#         (Rscript peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-qfrag-binding-characteristics.R) &>> {log}
-#         (LC_COLLATE=C sort -k1,1 -k2,2n peakcalling/qnexus/{wildcards.sample}_{wildcards.factor}-{wildcards.counttype}-Q-treatment.bedgraph > {output.coverage}) &>> {log}
-#         """
-
 rule get_protection:
     input:
-        tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
-        bam = lambda wildcards: "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["experimental_prefix"] +"only.bam" if wildcards.counttype=="counts" else "alignment/" + wildcards.sample + "-" + config["combinedgenome"]["spikein_prefix"] +"only.bam"
+        tsv = lambda wc: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wc.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
+        bam = lambda wc: "alignment/" + wc.sample + "-" + config["combinedgenome"]["experimental_prefix"] +"only.bam" if wc.counttype=="counts" else "alignment/" + wc.sample + "-" + config["combinedgenome"]["spikein_prefix"] +"only.bam"
     output:
         coverage = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-protection.bedgraph"
     wildcard_constraints:
@@ -350,8 +345,8 @@ rule get_protection:
 
 rule get_midpoint_coverage:
     input:
-        tsv = lambda wildcards: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wildcards.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
-        chrsizes = lambda wildcards: config["genome"]["chrsizes"] if wildcards.counttype=="counts" else config["genome"]["si-chrsizes"],
+        tsv = lambda wc: expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["experimental_prefix"]) if wc.counttype=="counts" else expand("peakcalling/macs/{group}-{species}_peaks.xls", group=GROUPS, species=config["combinedgenome"]["spikein_prefix"]),
+        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.counttype=="counts" else config["genome"]["si-chrsizes"],
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph"
     output:
@@ -366,9 +361,9 @@ rule get_midpoint_coverage:
 rule normalize:
     input:
         counts = "coverage/counts/{sample}_{factor}-chipnexus-counts-{strand}.bedgraph",
-        midpoints = lambda wildcards: "coverage/counts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-counts-midpoints.bedgraph" if wildcards.norm=="libsizenorm" else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-midpoints.bedgraph"
+        midpoints = lambda wc: "coverage/counts/" + wc.sample + "_" + wc.factor + "-chipnexus-counts-midpoints.bedgraph" if wc.norm=="libsizenorm" else "coverage/sicounts/" + wc.sample + "_" + wc.factor + "-chipnexus-sicounts-midpoints.bedgraph"
     params:
-        scalefactor = lambda wildcards: config["spikein-pct"] if wildcards.norm=="spikenorm" else 1
+        scalefactor = lambda wc: config["spikein-pct"] if wc.norm=="spikenorm" else 1
     output:
         normalized = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph",
     wildcard_constraints:
@@ -381,8 +376,8 @@ rule normalize:
 
 rule macs2:
     input:
-        bam = lambda wildcards: expand("alignment/{sample}-" + wildcards.species + "only.bam", sample={k for (k,v) in PASSING.items() if (v["group"]==wildcards.group and v["pass-qc"]=="pass")}),
-        chrsizes = lambda wildcards: config["genome"]["chrsizes"] if wildcards.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
+        bam = lambda wc: expand("alignment/{sample}-" + wc.species + "only.bam", sample={k for (k,v) in PASSING.items() if (v["group"]==wc.group and v["pass-qc"]=="pass")}),
+        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
     output:
         xls = "peakcalling/macs/{group}-{species}_peaks.xls",
         peaks = "peakcalling/macs/{group}-{species}_peaks.narrowPeak",
@@ -406,12 +401,12 @@ rule macs2:
         (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_summits.bed) &>> {log}
         """
 
-def selectchrom(wildcards):
-    if wildcards.strand not in ["SENSE","ANTISENSE"]:
-        if wildcards.norm=="sicounts":
+def selectchrom(wc):
+    if wc.strand not in ["SENSE","ANTISENSE"]:
+        if wc.norm=="sicounts":
             return config["genome"]["sichrsizes"]
         return config["genome"]["chrsizes"]
-    if wildcards.norm=="sicounts":
+    if wc.norm=="sicounts":
         return os.path.splitext(config["genome"]["sichrsizes"])[0] + "-STRANDED.tsv"
     return os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv"
 
@@ -434,7 +429,7 @@ rule get_si_pct:
     output:
         temp("qual_ctrl/all/{sample}_{factor}-spikeincounts.tsv")
     params:
-        group = lambda wildcards: SAMPLES[wildcards.sample]["group"]
+        group = lambda wc: SAMPLES[wc.sample]["group"]
     log: "logs/get_si_pct/get_si_pct-{sample}_{factor}.log"
     shell: """
         (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
@@ -457,7 +452,7 @@ rule plot_si_pct:
         plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
         stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
     params:
-        samplelist = lambda wildcards : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wildcards.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
+        samplelist = lambda wc : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wc.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
         conditions = config["comparisons"]["spikenorm"]["conditions"],
         controls = config["comparisons"]["spikenorm"]["controls"],
     script: "scripts/plotsipct.R"
@@ -537,7 +532,7 @@ rule peakstats:
         size = "peakcalling/macs/{condition}-v-{control}-{factor}-chipnexus-peaksizes.svg",
         dist = "peakcalling/macs/{condition}-v-{control}-{factor}-chipnexus-peakdistances.svg"
     params:
-        groups = lambda wildcards: [g for sublist in zip(controlgroups, conditiongroups) for g in sublist] if wildcards.condition=="all" else [wildcards.control, wildcards.condition],
+        groups = lambda wc: [g for sublist in zip(controlgroups, conditiongroups) for g in sublist] if wc.condition=="all" else [wc.control, wc.condition],
         prefix = config["combinedgenome"]["experimental_prefix"]
     script:
         "scripts/peakstats.R"
@@ -554,7 +549,7 @@ rule combine_peaks:
 rule map_counts_to_peaks:
     input:
         bed = "peakcalling/macs/allpeaks-{species}.bed",
-        bg = lambda wildcards: "coverage/counts/" + wildcards.sample +"_"+ wildcards.factor+"-chipnexus-counts-midpoints.bedgraph" if wildcards.species==config["combinedgenome"]["experimental_prefix"] else "coverage/sicounts/" + wildcards.sample + "_" + wildcards.factor + "-chipnexus-sicounts-midpoints.bedgraph"
+        bg = lambda wc: "coverage/counts/" + wc.sample +"_"+ wc.factor+"-chipnexus-counts-midpoints.bedgraph" if wc.species==config["combinedgenome"]["experimental_prefix"] else "coverage/sicounts/" + wc.sample + "_" + wc.factor + "-chipnexus-sicounts-midpoints.bedgraph"
     output:
         temp("coverage/counts/{sample}_{factor}-{species}-peak-counts.tsv")
     shell: """
@@ -575,10 +570,10 @@ rule join_peak_counts:
 rule call_de_peaks:
     input:
         expcounts = "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz",
-        sicounts = lambda wildcards: "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["spikein_prefix"] + ".tsv.gz" if wildcards.norm=="spikenorm" else "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz"
+        sicounts = lambda wc: "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["spikein_prefix"] + ".tsv.gz" if wc.norm=="spikenorm" else "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz"
     params:
-        samples = lambda wildcards : [k for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)],
-        groups = lambda wildcards : [PASSING[x]["group"] for x in [k for (k,v) in PASSING.items() if (v["group"]== wildcards.control or v["group"]==wildcards.condition)]],
+        samples = lambda wc : [k for (k,v) in PASSING.items() if (v["group"]== wc.control or v["group"]==wc.condition)],
+        groups = lambda wc : [PASSING[x]["group"] for x in [k for (k,v) in PASSING.items() if (v["group"]== wc.control or v["group"]==wc.condition)]],
         alpha = config["deseq"]["fdr"],
         lfc = log2(config["deseq"]["fold-change-threshold"]),
     output:
@@ -721,9 +716,9 @@ rule make_stranded_bedgraph:
 
 rule make_stranded_annotations:
     input:
-        lambda wildcards : config["annotations"][wildcards.annotation]["path"]
+        lambda wc : FIGURES[wc.figure]["annotations"][wc.annotation]["path"]
     output:
-        "{annopath}/stranded/{annotation}-STRANDED.{ext}"
+        "{annopath}/stranded/{figure}_{annotation}-STRANDED.{ext}"
     log : "logs/make_stranded_annotations/make_stranded_annotations-{annotation}.log"
     shell: """
         (bash scripts/makeStrandedBed.sh {input} > {output}) &> {log}
@@ -757,117 +752,96 @@ rule plotcorrelations:
     output:
         "qual_ctrl/{status}/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{status}-window-{windowsize}-{norm}-correlations.svg"
     params:
-        pcount = lambda wildcards: 0.01*int(wildcards.windowsize),
+        pcount = lambda wc: 0.01*int(wc.windowsize),
         samplelist = plotcorrsamples
     script:
         "scripts/plotcorr.R"
 
 rule compute_matrix:
     input:
-        annotation = lambda wildcards: config["annotations"][wildcards.annotation]["path"] if wildcards.strand=="protection" else os.path.dirname(config["annotations"][wildcards.annotation]["path"]) + "/stranded/" + wildcards.annotation + "-STRANDED" + os.path.splitext(config["annotations"][wildcards.annotation]["path"])[1],
+        annotation = lambda wc: FIGURES[wc.figure]["annotations"][wc.annotation]["path"] if wc.strand=="protection" else os.path.dirname(FIGURES[wc.figure]["annotations"][wc.annotation]["path"]) + "/stranded/" + wc.figure + "_" + wc.annotation + "-STRANDED" + os.path.splitext(FIGURES[wc.figure]["annotations"][wc.annotation]["path"])[1],
         bw = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     output:
-        dtfile = temp("datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.mat.gz"),
-        matrix = temp("datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.tsv"),
-        melted = "datavis/{annotation}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz",
+        dtfile = temp("datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.mat.gz"),
+        matrix = temp("datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}.tsv"),
+        melted = "datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz",
     params:
-        group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
-        upstream = lambda wildcards: config["annotations"][wildcards.annotation]["upstream"] + config["annotations"][wildcards.annotation]["binsize"],
-        dnstream = lambda wildcards: config["annotations"][wildcards.annotation]["dnstream"] + config["annotations"][wildcards.annotation]["binsize"],
-        binsize = lambda wildcards: config["annotations"][wildcards.annotation]["binsize"],
-        sort = lambda wildcards: config["annotations"][wildcards.annotation]["sort"],
-        sortusing = lambda wildcards: config["annotations"][wildcards.annotation]["sortby"],
-        binstat = lambda wildcards: config["annotations"][wildcards.annotation]["binstat"]
+        group = lambda wc : SAMPLES[wc.sample]["group"],
+        refpoint = lambda wc: "TSS" if FIGURES[wc.figure]["parameters"]["type"]=="scaled" else FIGURES[wc.figure]["parameters"]["refpoint"],
+        upstream = lambda wc: FIGURES[wc.figure]["parameters"]["upstream"] + FIGURES[wc.figure]["parameters"]["binsize"],
+        dnstream = lambda wc: FIGURES[wc.figure]["parameters"]["dnstream"] + FIGURES[wc.figure]["parameters"]["binsize"],
+        scaled_length = lambda wc: 0 if FIGURES[wc.figure]["parameters"]["type"]=="absolute" else FIGURES[wc.figure]["parameters"]["scaled_length"],
+        binsize = lambda wc: FIGURES[wc.figure]["parameters"]["binsize"],
+        binstat = lambda wc: FIGURES[wc.figure]["parameters"]["binstat"],
+        nan_afterend = lambda wc: [] if FIGURES[wc.figure]["parameters"]["type"]=="scaled" or not FIGURES[wc.figure]["parameters"]["nan_afterend"] else "--nanAfterEnd",
+        anno_label = lambda wc: FIGURES[wc.figure]["annotations"][wc.annotation]["label"]
     threads : config["threads"]
-    log: "logs/compute_matrix/compute_matrix-{annotation}_{sample}_{factor}-{norm}-{strand}.log"
+    log: "logs/compute_matrix/compute_matrix-{figure}_{annotation}_{sample}_{factor}-{norm}-{strand}.log"
     run:
-        if config["annotations"][wildcards.annotation]["type"]=="absolute":
-            refpoint = config["annotations"][wildcards.annotation]["refpoint"]
-            if config["annotations"][wildcards.annotation]["nan_afterend"]=="y":
-                shell("""(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --nanAfterEnd --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
-            else:
-                shell("""(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
+        if FIGURES[wildcards.figure]["parameters"]["type"]=="absolute":
+            shell("""(computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} {params.nan_afterend} --binSize {params.binsize} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
         else:
-            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
-            refpoint = "TSS"
-            shell("""(computeMatrix scale-regions -R {input.annotation} -S {input.bw} -out {output.dtfile} --outFileNameMatrix {output.matrix} -m {scaled_length} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --sortUsing {params.sortusing} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
+            shell("""(computeMatrix scale-regions -R {input.annotation} -S {input.bw} -out {output.dtfile} --outFileNameMatrix {output.matrix} -m {params.scaled_length} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --averageTypeBins {params.binstat} -p {threads}) &> {log}""")
         melt_upstream = params.upstream-params.binsize
-        shell("""(Rscript scripts/melt_matrix.R -i {output.matrix} -r {refpoint} --group {params.group} -s {wildcards.sample} -b {params.binsize} -u {melt_upstream} -o {output.melted}) &>> {log}""")
+        shell("""(Rscript scripts/melt_matrix.R -i {output.matrix} -r {params.refpoint} -g {params.group} -s {wildcards.sample} -a {params.anno_label} -b {params.binsize} -u {melt_upstream} -o {output.melted}) &>> {log}""")
 
 rule cat_matrices:
     input:
-        expand("datavis/{{annotation}}/{{norm}}/{{annotation}}_{sample}_{{factor}}-chipnexus-{{norm}}-{{strand}}-melted.tsv.gz", sample=SAMPLES)
+        lambda wc: expand("datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz", annotation=[k for k,v in FIGURES[wc.figure]["annotations"].items()], sample=SAMPLES, factor=wc.factor, figure=wc.figure, norm=wc.norm, strand=wc.strand)
     output:
-        "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
-    log: "logs/cat_matrices/cat_matrices-{annotation}_{norm}-{strand}.log"
+        "datavis/{figure}/{norm}/{figure}-allsamples-allannotations-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
+    log: "logs/cat_matrices/cat_matrices-{figure}_{norm}-{strand}.log"
     shell: """
         (cat {input} > {output}) &> {log}
         """
 
-rule plot_heatmaps:
+rule plot_figures:
     input:
-        matrix = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
+        matrices = expand("datavis/{{figure}}/{{norm}}/{{figure}}-allsamples-allannotations-{{factor}}-chipnexus-{{norm}}-{strand}.tsv.gz", strand=["protection", "SENSE", "ANTISENSE"]),
+        annotations = lambda wc: [v["path"] for k,v in FIGURES[wc.figure]["annotations"].items()]
     output:
-        heatmap_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bysample.svg",
-        heatmap_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_heatmap-bygroup.svg",
+        heatmap_sample = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_heatmap-bysample.svg",
+        heatmap_group = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_heatmap-bygroup.svg",
+        metagene_sample_protection = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-bysample-protection.svg",
+        metagene_sample_stranded = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-bysample-coverage.svg",
+        metagene_sample_overlay_protection = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-sampleoverlay-protection.svg",
+        metagene_sample_overlay_stranded = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-sampleoverlay-coverage.svg",
+        metagene_group_protection = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-bygroup-protection.svg",
+        metagene_group_stranded = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-bygroup-coverage.svg",
+        metagene_sampleclust_protection = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-byclustersample-protection.svg",
+        metagene_sampleclust_stranded = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-byclustersample-coverage.svg",
+        metagene_groupclust_protection = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-byclustergroup-protection.svg",
+        metagene_groupclust_stranded = "datavis/{figure}/{norm}/{condition}-v-{control}/{status}/{factor}-chipnexus-{figure}-{norm}-{status}_{condition}-v-{control}_metagene-byclustergroup-coverage.svg",
     params:
+        # abusing snakemake a bit here...using params as output paths in order to use lambda functions
+        annotations_out = lambda wc: ["datavis/" + wc.figure + "/" + wc.norm + "/" + wc.condition + "-v-" + wc.control + "/" + wc.status + "/" + annotation + "_cluster-" + str(cluster) + ".bed" for annotation in FIGURES[wc.figure]["annotations"] for cluster in range(1, FIGURES[wc.figure]["annotations"][annotation]["n_clusters"]+1)],
+        clusters_out = lambda wc: ["datavis/" + wc.figure + "/" + wc.norm + "/" + wc.condition + "-v-" + wc.control + "/" + wc.status + "/" + annotation + ".pdf" for annotation in FIGURES[wc.figure]["annotations"]],
         samplelist = plotcorrsamples,
-        mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
-        upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
-        dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
-        pct_cutoff = lambda wildcards : config["annotations"][wildcards.annotation]["pct_cutoff"],
-        cluster = lambda wildcards : config["annotations"][wildcards.annotation]["cluster"],
-        nclust = lambda wildcards: config["annotations"][wildcards.annotation]["nclusters"],
-        heatmap_cmap = lambda wildcards : config["annotations"][wildcards.annotation]["heatmap_colormap"],
-        refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
-        ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
-    run:
-        if config["annotations"][wildcards.annotation]["type"]=="scaled":
-            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
-            endlabel = config["annotations"][wildcards.annotation]["three_prime_label"]
-        else:
-            scaled_length=0
-            endlabel = "HAIL SATAN!"
-        shell("""Rscript scripts/plot_nexus_heatmaps.R -i {input.matrix} -s {params.samplelist} -t {params.mtype} -u {params.upstream} -d {params.dnstream} -c {params.pct_cutoff} -z {params.cluster} -k {params.nclust} -r {params.refpointlabel} -f {wildcards.factor} -l {scaled_length} -e {endlabel} -y {params.ylabel} -m {params.heatmap_cmap} -o {output.heatmap_sample} -p {output.heatmap_group}""")
-
-rule plot_metagenes:
-    input:
-        plus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-SENSE.tsv.gz",
-        minus = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-ANTISENSE.tsv.gz",
-        protection = "datavis/{annotation}/{norm}/allsamples-{annotation}-{factor}-chipnexus-{norm}-protection.tsv.gz"
-    output:
-        smeta_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bygroup.svg",
-        smeta_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_stranded-metagene-bysample.svg",
-        pmeta_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bygroup.svg",
-        pmeta_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-bysample.svg",
-        pmeta_goverlay = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-group.svg",
-        pmeta_soverlay = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample.svg",
-        pmeta_soverlay_bygroup = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metagene-overlay-sample-bygroup.svg",
-        meta_heatmap_group = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bygroup.svg",
-        meta_heatmap_sample = "datavis/{annotation}/{norm}/{condition}-v-{control}/{factor}-chipnexus-{annotation}-{norm}-{status}_{condition}-v-{control}_protection-metaheatmap-bysample.svg",
-    params:
-        samplelist = plotcorrsamples,
-        mtype = lambda wildcards : config["annotations"][wildcards.annotation]["type"],
-        upstream = lambda wildcards : config["annotations"][wildcards.annotation]["upstream"],
-        dnstream = lambda wildcards : config["annotations"][wildcards.annotation]["dnstream"],
-        trim_pct = lambda wildcards : config["annotations"][wildcards.annotation]["trim_pct"],
-        refpointlabel = lambda wildcards : config["annotations"][wildcards.annotation]["refpointlabel"],
-        factor = config["factor"],
-        ylabel = lambda wildcards : config["annotations"][wildcards.annotation]["ylabel"]
-    run:
-        if config["annotations"][wildcards.annotation]["type"]=="scaled":
-            scaled_length = config["annotations"][wildcards.annotation]["scaled_length"]
-            endlabel = config["annotations"][wildcards.annotation]["three_prime_label"]
-        else:
-            scaled_length=0
-            endlabel = "HAIL SATAN!"
-        shell("""Rscript scripts/plot_nexus_metagenes.R --inplus {input.plus} --inminus {input.minus} --inprotection {input.protection} -s {params.samplelist} -t {params.mtype} -u {params.upstream} -d {params.dnstream} -p {params.trim_pct} -r {params.refpointlabel} -f {wildcards.factor} -l {scaled_length} -e {endlabel} -y {params.ylabel} --out1 {output.smeta_group} --out2 {output.smeta_sample} --out3 {output.pmeta_group} --out4 {output.pmeta_sample} --out5 {output.pmeta_goverlay} --out6 {output.pmeta_soverlay} --out7 {output.pmeta_soverlay_bygroup} --out8 {output.meta_heatmap_group} --out9 {output.meta_heatmap_sample}""")
+        plottype = lambda wc: FIGURES[wc.figure]["parameters"]["type"],
+        upstream = lambda wc: FIGURES[wc.figure]["parameters"]["upstream"],
+        dnstream = lambda wc: FIGURES[wc.figure]["parameters"]["dnstream"],
+        scaled_length = lambda wc: 0 if FIGURES[wc.figure]["parameters"]["type"]=="absolute" else FIGURES[wc.figure]["parameters"]["scaled_length"],
+        pct_cutoff = lambda wc: FIGURES[wc.figure]["parameters"]["pct_cutoff"],
+        log_transform = lambda wc: str(FIGURES[wc.figure]["parameters"]["log_transform"]).upper(),
+        pcount = lambda wc: 0 if not FIGURES[wc.figure]["parameters"]["log_transform"] else FIGURES[wc.figure]["parameters"]["pseudocount"],
+        trim_pct = lambda wc: FIGURES[wc.figure]["parameters"]["trim_pct"],
+        refpointlabel = lambda wc: FIGURES[wc.figure]["parameters"]["refpointlabel"],
+        endlabel = lambda wc:  "HAIL SATAN" if FIGURES[wc.figure]["parameters"]["type"]=="absolute" else FIGURES[wc.figure]["parameters"]["three_prime_label"],
+        cmap = lambda wc: FIGURES[wc.figure]["parameters"]["heatmap_colormap"],
+        sortmethod = lambda wc: FIGURES[wc.figure]["parameters"]["arrange"],
+        cluster_scale = lambda wc: "FALSE" if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else str(FIGURES[wc.figure]["parameters"]["cluster_scale"]).upper(),
+        cluster_samples = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else cluster_samples(wc.status, wc.norm, FIGURES[wc.figure]["parameters"]["cluster_conditions"], FIGURES[wc.figure]["parameters"]["cluster_strands"]),
+        cluster_five = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else FIGURES[wc.figure]["parameters"]["cluster_five"],
+        cluster_three = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else FIGURES[wc.figure]["parameters"]["cluster_three"],
+        k = lambda wc: [v["n_clusters"] for k,v in FIGURES[wc.figure]["annotations"].items()],
+    script:
+        "scripts/plot_nexus_figures.R"
 
 rule make_ratio_annotation:
     input:
-        lambda wildcards: config["ratios"][wildcards.ratio]["path"]
+        lambda wc: config["ratios"][wc.ratio]["path"]
     params:
-        totalsize = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["upstream"] + config["ratios"][wildcards.ratio]["numerator"]["dnstream"] + config["ratios"][wildcards.ratio]["denominator"]["upstream"] + config["ratios"][wildcards.ratio]["denominator"]["dnstream"],
+        totalsize = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"] + config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
     output:
         "ratios/{ratio}/{ratio}.bed"
     log: "logs/make_ratio_annotation/make_ratio_annotation-{ratio}.log"
@@ -884,10 +858,10 @@ rule ratio_counts:
         matrix = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.tsv"),
         melted = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}-melted.tsv.gz"),
     params:
-        group = lambda wildcards : SAMPLES[wildcards.sample]["group"],
-        upstream = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["upstream"],
-        dnstream = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["dnstream"],
-        refpoint = lambda wildcards: config["ratios"][wildcards.ratio][wildcards.fractype]["refpoint"]
+        group = lambda wc : SAMPLES[wc.sample]["group"],
+        upstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["upstream"],
+        dnstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["dnstream"],
+        refpoint = lambda wc: config["ratios"][wc.ratio][wc.fractype]["refpoint"]
     threads: config["threads"]
     log: "logs/ratio_counts/ratio_counts-{ratio}-{fractype}-{sample}.log"
     shell: """
@@ -905,12 +879,12 @@ rule cat_ratio_counts:
         (cat {input} > {output}) &> {log}
         """
 
-def ratiosamples(wildcards):
-    dd = SAMPLES if wildcards.status=="all" else PASSING
-    if wildcards.condition=="all":
+def ratiosamples(wc):
+    dd = SAMPLES if wc.status=="all" else PASSING
+    if wc.condition=="all":
         return list(dd.keys())
     else:
-        return [k for k,v in dd.items() if v["group"]==wildcards.control or v["group"]==wildcards.condition]
+        return [k for k,v in dd.items() if v["group"]==wc.control or v["group"]==wc.condition]
 
 rule plot_ratios:
     input:
@@ -920,13 +894,13 @@ rule plot_ratios:
         violin = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
         ecdf = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
     params:
-        num_size = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["upstream"] + config["ratios"][wildcards.ratio]["numerator"]["dnstream"],
-        den_size = lambda wildcards: config["ratios"][wildcards.ratio]["denominator"]["upstream"] + config["ratios"][wildcards.ratio]["denominator"]["dnstream"],
+        num_size = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"],
+        den_size = lambda wc: config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
         pcount = 1e-3,
         samplelist = ratiosamples,
-        ratio_label = lambda wildcards: config["ratios"][wildcards.ratio]["ratio_name"],
-        num_label = lambda wildcards: config["ratios"][wildcards.ratio]["numerator"]["region_label"],
-        den_label = lambda wildcards: config["ratios"][wildcards.ratio]["denominator"]["region_label"],
-        annotation_label = lambda wildcards: config["ratios"][wildcards.ratio]["label"]
+        ratio_label = lambda wc: config["ratios"][wc.ratio]["ratio_name"],
+        num_label = lambda wc: config["ratios"][wc.ratio]["numerator"]["region_label"],
+        den_label = lambda wc: config["ratios"][wc.ratio]["denominator"]["region_label"],
+        annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
     script:
         "scripts/ratio.R"
