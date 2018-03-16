@@ -124,14 +124,17 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         
         if (strand=="both"){
             metagene = metagene +
+                geom_ribbon(aes(ymin=-mean_antisense, ymax=0), alpha=0.05, size=0) +
                 geom_ribbon(aes(ymin=-mean_antisense-1.96*sem_antisense,
                                 ymax=-mean_antisense+1.96*sem_antisense),
                                 alpha=0.4, size=0) +
                 geom_line(aes(y=-mean_antisense)) +
+                geom_ribbon(aes(ymin=0, ymax=mean_sense), alpha=0.1, size=0) +
                 geom_ribbon(aes(ymin=mean_sense-1.96*sem_sense,
                                 ymax=mean_sense+1.96*sem_sense),
                                 alpha=0.4, size=0) +
-                geom_line(aes(y=mean_sense))
+                geom_line(aes(y=mean_sense)) +
+                geom_hline(yintercept = 0, size=0.5, color="grey65")
         }
         else if (strand=="protection"){
             metagene = metagene +
