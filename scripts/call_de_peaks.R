@@ -153,10 +153,10 @@ call_de_bases = function(intable, norm, sitable, samples, groups, condition, con
                 theme_light() +
                 theme(text = element_text(size=8))
     
-    out = grid.arrange(sfplot, ggplot()+theme_void(),
-                       ntdplot, rldplot,
-                       maplot, volcano, ncol=2,
-                       heights = unit(c(4, 6, 6), rep("cm",3)))
+    out = arrangeGrob(sfplot, ggplot()+theme_void(),
+                      ntdplot, rldplot,
+                      maplot, volcano, ncol=2,
+                      heights = unit(c(4, 6, 6), rep("cm",3)))
     ggsave(qcplots, out, height=18, width = 16, units="cm")
 }
 
