@@ -6,13 +6,13 @@ import itertools
 configfile: "config.yaml"
 
 SAMPLES = config["samples"]
-PASSING = {k:v for (k,v) in SAMPLES.items() if v["pass-qc"] == "pass"}
+PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"] == "pass"}
 GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
 
-controlgroups = config["comparisons"]["libsizenorm"]["controls"]
-conditiongroups = config["comparisons"]["libsizenorm"]["conditions"]
-controlgroups_si = config["comparisons"]["spikenorm"]["controls"]
-conditiongroups_si = config["comparisons"]["spikenorm"]["conditions"]
+controlgroups = [k for k,v in config["comparisons"]["libsizenorm"].items()]
+conditiongroups = [v for k,v in config["comparisons"]["libsizenorm"].items()]
+controlgroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
+conditiongroups_si = [v for k,v in config["comparisons"]["spikenorm"].items()]
 
 CATEGORIES = ["genic", "intragenic", "intergenic"]
 
@@ -53,10 +53,6 @@ rule all:
         # datavis
         expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
         expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
-        # expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("datavis/{{annotation}}/libsizenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-libsizenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
-        # expand(expand("datavis/{{annotation}}/spikenorm/{condition}-v-{control}/{{factor}}-chipnexus-{{annotation}}-spikenorm-{{status}}_{condition}-v-{control}_stranded-metagene-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), annotation=config["annotations"], factor=config["factor"], status=["all","passing"]),
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
@@ -70,17 +66,18 @@ rule all:
         expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
+
+
 def plotcorrsamples(wc):
-    dd = SAMPLES if wc.status=="all" else PASSING
     if wc.condition=="all":
         if wc.norm=="libsizenorm": #condition==all,norm==lib
-            return list(dd.keys())
+            return list(SAMPLES.keys())
         else: #condition==all,norm==spike
-            return list({k:v for (k,v) in dd.items() if v["spikein"]=="y"}.keys())
+            return [k for k,v in SAMPLES.items() if v["spikein"]=="y"]
     elif wc.norm=="libsizenorm": #condition!=all;norm==lib
-        return list({k:v for (k,v) in dd.items() if v["group"]==wc.control or v["group"]==wc.condition}.keys())
+        return [k for k,v in PASSING.items() if v["group"] in (wc.control, wc.condition)]
     else: #condition!=all;norm==spike
-        return list({k:v for (k,v) in dd.items() if (v["group"]==wc.control or v["group"]==wc.condition) and v["spikein"]=="y"}.keys())
+        return [k for k,v in PASSING.items() if v["group"] in (wc.control, wc.condition) and v["spikein"]=="y"]
 
 def cluster_samples(status, norm, cluster_groups, cluster_strands):
     ll = []
@@ -319,13 +316,11 @@ rule get_coverage:
     params:
         prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
     output:
-        # plmin = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-combined.bedgraph",
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph",
     wildcard_constraints:
         counttype="counts|sicounts"
     log: "logs/get_coverage/get_coverage-{sample}-{counttype}.log"
-        # (genomeCoverageBed -bga -5 -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plmin}) &> {log}
     shell: """
         (genomeCoverageBed -bga -5 -strand + -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.plus}) &>> {log}
         (genomeCoverageBed -bga -5 -strand - -ibam {input} | grep {params.prefix} | sed 's/{params.prefix}//g' | sort -k1,1 -k2,2n > {output.minus}) &>> {log}
@@ -377,7 +372,7 @@ rule normalize:
 
 rule macs2:
     input:
-        bam = lambda wc: expand("alignment/{sample}-" + wc.species + "only.bam", sample={k for (k,v) in PASSING.items() if (v["group"]==wc.group and v["pass-qc"]=="pass")}),
+        bam = lambda wc: expand("alignment/{sample}-" + wc.species + "only.bam", sample=[k for k,v in PASSING.items() if v["group"]==wc.group]),
         chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
     output:
         xls = "peakcalling/macs/{group}-{species}_peaks.xls",
@@ -453,9 +448,9 @@ rule plot_si_pct:
         plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
         stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
     params:
-        samplelist = lambda wc : list({k:v for (k,v) in SAMPLES.items() if v["spikein"]=="y"}.keys()) if wc.status=="all" else list({k:v for (k,v) in PASSING.items() if v["spikein"]=="y"}.keys()),
-        conditions = config["comparisons"]["spikenorm"]["conditions"],
-        controls = config["comparisons"]["spikenorm"]["controls"],
+        samplelist = lambda wc : [k for k,v in SAMPLES.items() if v["spikein"]=="y"] if wc.status=="all" else [k for k,v in PASSING.items() if v["spikein"]=="y"],
+        conditions = conditiongroups_si,
+        controls = controlgroups_si
     script: "scripts/plotsipct.R"
 
 rule build_genic_annotation:
@@ -573,8 +568,8 @@ rule call_de_peaks:
         expcounts = "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz",
         sicounts = lambda wc: "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["spikein_prefix"] + ".tsv.gz" if wc.norm=="spikenorm" else "coverage/counts/union-bedgraph-allpeakcounts-" + config["combinedgenome"]["experimental_prefix"] + ".tsv.gz"
     params:
-        samples = lambda wc : [k for (k,v) in PASSING.items() if (v["group"]== wc.control or v["group"]==wc.condition)],
-        groups = lambda wc : [PASSING[x]["group"] for x in [k for (k,v) in PASSING.items() if (v["group"]== wc.control or v["group"]==wc.condition)]],
+        samples = lambda wc : [k for k,v in PASSING.items() if v["group"] in [wc.control, wc.condition]],
+        groups = lambda wc: [v["group"] for k,v in PASSING.items() if v["group"] in [wc.control, wc.condition]],
         alpha = config["deseq"]["fdr"],
         lfc = log2(config["deseq"]["fold-change-threshold"]),
     output:
@@ -788,7 +783,7 @@ rule compute_matrix:
 
 rule cat_matrices:
     input:
-        lambda wc: expand("datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz", annotation=[k for k,v in FIGURES[wc.figure]["annotations"].items()], sample=SAMPLES, factor=wc.factor, figure=wc.figure, norm=wc.norm, strand=wc.strand)
+        lambda wc: expand("datavis/{figure}/{norm}/{annotation}_{sample}_{factor}-chipnexus-{norm}-{strand}-melted.tsv.gz", annotation=list(FIGURES[wc.figure]["annotations"].keys()), sample=SAMPLES, factor=wc.factor, figure=wc.figure, norm=wc.norm, strand=wc.strand)
     output:
         "datavis/{figure}/{norm}/{figure}-allsamples-allannotations-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
     log: "logs/cat_matrices/cat_matrices-{figure}_{norm}-{strand}.log"
@@ -905,3 +900,4 @@ rule plot_ratios:
         annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
     script:
         "scripts/ratio.R"
+
