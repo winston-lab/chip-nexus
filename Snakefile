@@ -9,10 +9,10 @@ SAMPLES = config["samples"]
 PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"] == "pass"}
 GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
 
-controlgroups = [k for k,v in config["comparisons"]["libsizenorm"].items()]
-conditiongroups = [v for k,v in config["comparisons"]["libsizenorm"].items()]
-controlgroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
-conditiongroups_si = [v for k,v in config["comparisons"]["spikenorm"].items()]
+controlgroups = [v for k,v in config["comparisons"]["libsizenorm"].items()]
+conditiongroups = [k for k,v in config["comparisons"]["libsizenorm"].items()]
+controlgroups_si = [v for k,v in config["comparisons"]["spikenorm"].items()]
+conditiongroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
 
 CATEGORIES = ["genic", "intragenic", "intergenic"]
 
