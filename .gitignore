@@ -15,6 +15,7 @@ logs/cluster/*
 snakemake.err
 snakemake.log
 config.yaml
+mogrify.log
 
 !fastq/.gitkeep
 !logs/.gitkeep

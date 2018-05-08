@@ -31,6 +31,9 @@ localrules:
     cat_matrices,
     make_ratio_annotation, cat_ratio_counts
 
+onsuccess:
+    shell("(./mogrify.sh) > mogrify.log")
+
 rule all:
     input:
         #FastQC
