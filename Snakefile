@@ -387,14 +387,13 @@ rule macs2:
         cntrl_bg = "peakcalling/macs/{group}-{species}_control_lambda.bdg"
     params:
         bw = config["macs2"]["bw"],
-        slocal = config["macs2"]["slocal"],
         llocal = config["macs2"]["llocal"],
         qscore = config["macs2"]["fdr"]
     conda:
         "envs/macs2.yaml"
     log: "logs/macs2/macs2-{group}-{species}.log"
     shell: """
-        (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group}-{wildcards.species} --SPMR --bw {params.bw} --slocal {params.slocal} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
+        (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group}-{wildcards.species} --SPMR --bw {params.bw} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
         (Rscript peakcalling/macs/{wildcards.group}-{wildcards.species}_model.r) &>> {log}
         (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_peaks.narrowPeak) &>> {log}
         (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_summits.bed) &>> {log}
