@@ -20,14 +20,14 @@ rule align:
         fastq = expand("fastq/cleaned/{{sample}}_{factor}-chipnexus-clean.fastq.gz", factor=FACTOR)
     output:
         bam = temp(expand("alignment/{{sample}}_{factor}-chipnexus-uniquemappers.bam", factor=FACTOR)),
-        unaligned_fq = expand("fastq/unaligned/{{sample}}_{factor}-chipnexus-unaligned.fastq.gz", factor=FACTOR),
+        unaligned_fastq = expand("fastq/{{sample}}_{factor}-chipnexus-unaligned.fastq.gz", factor=FACTOR),
         log = "logs/align/align_{sample}.log"
     params:
         outbase =  config["bowtie2"]["index-path"] + "/" +  config["combinedgenome"]["name"],
         minmapq = config["bowtie2"]["minmapq"]
     threads : config["threads"]
     shell: """
-        (bowtie2 -x {params.outbase} -U {input.fastq} --un-gz {output.unaligned_fq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
+        (bowtie2 -x {params.outbase} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
         """
 
 rule remove_PCR_duplicates:
@@ -48,7 +48,7 @@ rule index_bam:
         "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam.bai"
     log : "logs/index_bam/index_bam-{sample}.log"
     shell: """
-        (samtools index {input.bam}) &> {log}
+        (samtools index {input}) &> {log}
         """
 
 #peakcalling programs (MACS2 and Qnexus) require BAM input

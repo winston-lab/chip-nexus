@@ -7,9 +7,9 @@ __default__:
     log : "logs/cluster/{rule}.{wildcards}.log"
     err : "logs/cluster/{rule}.{wildcards}.err"
 
-fastqc_raw:
+fastqc_pre_and_unaligned:
     time : 15
-    n : 1
+    n : 2
     mem : 4000
 
 clean_reads:
@@ -22,9 +22,9 @@ extract_molecular_barcode:
     n : 1
     mem : 2000
 
-fastqc_processed:
+fastqc_aligned:
     time : 15
-    n : 1
+    n : 2
     mem : 4000
 
 fastqc_aligned:
@@ -85,7 +85,7 @@ qnexus:
     time : 15
     mem: 2000
 
-macs2:
+callpeaks_macs2:
     time : 60
     mem : 8000
 

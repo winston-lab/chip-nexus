@@ -4,6 +4,8 @@ from math import log2, log10
 import itertools
 
 configfile: "config.yaml"
+subworkflow build_annotations:
+    workdir: config["genome"]["annotation_workflow"]
 
 FACTOR = config["factor"]
 
@@ -38,8 +40,8 @@ onsuccess:
 
 rule all:
     input:
-        ##FastQC
-        #'qual_ctrl/fastqc/per_base_sequence_content.svg',
+        #FastQC
+        'qual_ctrl/fastqc/' + FACTOR + '-chipnexus-per_base_sequence_content.svg',
         #alignment
         expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam", sample=SAMPLES, factor=FACTOR),
         ##coverage
@@ -50,8 +52,8 @@ rule all:
         #expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
         #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
-        ##macs2
-        #expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
+        #macs2
+        expand("peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.narrowPeak", group=GROUPS, species=["experimental", "spikein"], factor=FACTOR),
         ##categorise peaks
         #expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
         #expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
@@ -94,130 +96,6 @@ def cluster_samples(status, norm, cluster_groups, cluster_strands):
         if strand in ["antisense", "both"]:
             ll.append([sample + "-" + "antisense" for sample in sublist])
     return(list(itertools.chain(*ll)))
-
-rule fastqc_raw:
-    input:
-        lambda wc: SAMPLES[wc.sample]["fastq"]
-    params:
-        adapter = config["cutadapt"]["adapter"]
-    output:
-        "qual_ctrl/fastqc/raw/{sample}/{fname}/fastqc_data.txt"
-    threads: config["threads"]
-    log: "logs/fastqc/raw/fastqc-raw-{sample}.log"
-    shell: """
-        (mkdir -p qual_ctrl/fastqc/raw/{wildcards.sample}) &> {log}
-        (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/raw/{wildcards.sample} {input}) &>> {log}
-        """
-
-rule fastqc_cleaned:
-    input:
-        "fastq/{fqtype}/{sample}-{fqtype}.fastq.gz"
-    params:
-        adapter = config["cutadapt"]["adapter"]
-    output:
-        "qual_ctrl/fastqc/{fqtype}/{sample}-{fqtype}_fastqc/fastqc_data.txt",
-    threads : config["threads"]
-    log: "logs/fastqc/{fqtype}/fastqc-{fqtype}-{sample}.log"
-    wildcard_constraints:
-        fqtype = "cleaned|unaligned"
-    shell: """
-        (mkdir -p qual_ctrl/fastqc/{wildcards.fqtype}) &> {log}
-        (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/{wildcards.fqtype} {input}) &>> {log}
-        """
-
-rule fastqc_aligned:
-    input:
-        "alignment/{sample}-noPCRdup.bam"
-    params:
-        adapter = config["cutadapt"]["adapter"]
-    output:
-        "qual_ctrl/fastqc/aligned_noPCRdup/{sample}-aligned_noPCRdup_fastqc/fastqc_data.txt",
-    threads : config["threads"]
-    log: "logs/fastqc/aligned_noPCRdup/fastqc-aligned_noPCRdup-{sample}.log"
-    shell: """
-        (mkdir -p qual_ctrl/fastqc/aligned_noPCRdup) &> {log}
-        (bedtools bamtofastq -fq qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq -i {input}) &>> {log}
-        (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/aligned_noPCRdup qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq) &>> {log}
-        (rm qual_ctrl/fastqc/aligned_noPCRdup/{wildcards.sample}-aligned_noPCRdup.fastq) &>> {log}
-        """
-
-rule fastqc_aggregate:
-    input:
-        raw = expand("qual_ctrl/fastqc/raw/{sample}/{fname}/fastqc_data.txt", zip, sample=SAMPLES, fname=[os.path.split(v["fastq"])[1].split(".fastq")[0] + "_fastqc" for k,v in SAMPLES.items()]),
-        cleaned = expand("qual_ctrl/fastqc/cleaned/{sample}-cleaned_fastqc/fastqc_data.txt", sample=SAMPLES),
-        aligned_noPCRdup = expand("qual_ctrl/fastqc/aligned_noPCRdup/{sample}-aligned_noPCRdup_fastqc/fastqc_data.txt", sample=SAMPLES),
-        unaligned = expand("qual_ctrl/fastqc/unaligned/{sample}-unaligned_fastqc/fastqc_data.txt", sample=SAMPLES),
-    output:
-        'qual_ctrl/fastqc/per_base_quality.tsv',
-        'qual_ctrl/fastqc/per_tile_quality.tsv',
-        'qual_ctrl/fastqc/per_sequence_quality.tsv',
-        'qual_ctrl/fastqc/per_base_sequence_content.tsv',
-        'qual_ctrl/fastqc/per_sequence_gc.tsv',
-        'qual_ctrl/fastqc/per_base_n.tsv',
-        'qual_ctrl/fastqc/sequence_length_distribution.tsv',
-        'qual_ctrl/fastqc/sequence_duplication_levels.tsv',
-        'qual_ctrl/fastqc/adapter_content.tsv',
-        'qual_ctrl/fastqc/kmer_content.tsv'
-    run:
-        shell("rm -f {output}")
-        #for each statistic
-        for outpath, stat, header in zip(output, ["Per base sequence quality", "Per tile sequence quality", "Per sequence quality scores", "Per base sequence content", "Per sequence GC content", "Per base N content", "Sequence Length Distribution", "Total Deduplicated Percentage", "Adapter Content", "Kmer Content"], ["base\tmean\tmedian\tlower_quartile\tupper_quartile\tten_pct\tninety_pct\tsample\tstatus", "tile\tbase\tmean\tsample\tstatus",
-        "quality\tcount\tsample\tstatus", "base\tg\ta\tt\tc\tsample\tstatus", "gc_content\tcount\tsample\tstatus", "base\tn_count\tsample\tstatus", "length\tcount\tsample\tstatus", "duplication_level\tpct_of_deduplicated\tpct_of_total\tsample\tstatus", "position\tpct\tsample\tstatus",
-        "sequence\tcount\tpval\tobs_over_exp_max\tmax_position\tsample\tstatus" ]):
-            for input_type in ["raw", "cleaned", "aligned_noPCRdup", "unaligned"]:
-                for sample_id, fqc in zip(SAMPLES.keys(), input[input_type]):
-                    shell("""awk -v sample_id={sample_id} -v input_type={input_type} 'BEGIN{{FS=OFS="\t"}} /{stat}/{{flag=1;next}}/>>END_MODULE/{{flag=0}} flag {{print $0, sample_id, input_type}}' {fqc} | tail -n +2 >> {outpath}""")
-            shell("""sed -i "1i {header}" {outpath}""")
-
-rule plot_fastqc_summary:
-    input:
-        seq_len_dist = 'qual_ctrl/fastqc/sequence_length_distribution.tsv',
-        per_tile = 'qual_ctrl/fastqc/per_tile_quality.tsv',
-        per_base_qual = 'qual_ctrl/fastqc/per_base_quality.tsv',
-        per_base_seq = 'qual_ctrl/fastqc/per_base_sequence_content.tsv',
-        per_base_n = 'qual_ctrl/fastqc/per_base_n.tsv',
-        per_seq_gc = 'qual_ctrl/fastqc/per_sequence_gc.tsv',
-        per_seq_qual = 'qual_ctrl/fastqc/per_sequence_quality.tsv',
-        adapter_content = 'qual_ctrl/fastqc/adapter_content.tsv',
-        seq_dup = 'qual_ctrl/fastqc/sequence_duplication_levels.tsv',
-        # kmer = 'qual_ctrl/fastqc/kmer_content.tsv'
-    output:
-        seq_len_dist = 'qual_ctrl/fastqc/sequence_length_distribution.svg',
-        per_tile = 'qual_ctrl/fastqc/per_tile_quality.svg',
-        per_base_qual = 'qual_ctrl/fastqc/per_base_quality.svg',
-        per_base_seq = 'qual_ctrl/fastqc/per_base_sequence_content.svg',
-        per_seq_gc = 'qual_ctrl/fastqc/per_sequence_gc.svg',
-        per_seq_qual = 'qual_ctrl/fastqc/per_sequence_quality.svg',
-        adapter_content = 'qual_ctrl/fastqc/adapter_content.svg',
-        seq_dup = 'qual_ctrl/fastqc/sequence_duplication_levels.svg',
-        # kmer = 'qual_ctrl/fastqc/kmer_content.svg',
-    script: "scripts/fastqc_summary.R"
-
-rule read_processing_numbers:
-    input:
-        adapter = expand("logs/remove_adapter/remove_adapter-{sample}.log", sample=SAMPLES),
-        align = expand("logs/align/align-{sample}.log", sample=SAMPLES),
-        nodups = expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES)
-    output:
-        "qual_ctrl/read_processing_summary.tsv"
-    log: "logs/read_processing_summary.log"
-    run:
-        shell("""(echo -e "sample\traw\tcleaned\tmapped\tunique_map\tnoPCRdup" > {output}) &> {log}""")
-        for sample, adapter, align, nodups in zip(SAMPLES.keys(), input.adapter, input.align, input.nodups):
-            shell("""(grep -e "Total reads processed:" -e "Reads written" {adapter} | cut -d: -f2 | sed 's/,//g' | awk 'BEGIN{{ORS="\t"; print "{sample}"}}{{print $1}}' >> {output}) &> {log}""")
-            shell("""(grep -e "aligned 0 times" -e "aligned exactly 1 time" {align} | awk 'BEGIN{{ORS="\t"}} {{print $1}}' >> {output}) &> {log}""")
-            shell("""(samtools view -c {nodups} | awk '{{print $1}}' >> {output}) &> {log}""")
-        shell("""(awk 'BEGIN{{FS=OFS="\t"}} NR==1; NR>1{{$4=$3-$4; print $0}}' {output} > qual_ctrl/.readnumbers.temp; mv qual_ctrl/.readnumbers.temp {output}) &> {log}""")
-
-rule plot_read_processing:
-    input:
-        "qual_ctrl/read_processing_summary.tsv"
-    output:
-        surv_abs_out = "qual_ctrl/read_processing-survival-absolute.svg",
-        surv_rel_out = "qual_ctrl/read_processing-survival-relative.svg",
-        loss_out  = "qual_ctrl/read_processing-loss.svg",
-    script: "scripts/processing_summary.R"
-
 
 rule get_coverage:
     input:
@@ -279,32 +157,6 @@ rule normalize:
         (bash scripts/libsizenorm.sh {input.midpoints} {input.counts} {params.scalefactor} > {output.normalized}) &> {log}
         """
 
-rule macs2:
-    input:
-        bam = lambda wc: expand("alignment/{sample}-" + wc.species + "only.bam", sample=[k for k,v in PASSING.items() if v["group"]==wc.group]),
-        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
-    output:
-        xls = "peakcalling/macs/{group}-{species}_peaks.xls",
-        peaks = "peakcalling/macs/{group}-{species}_peaks.narrowPeak",
-        summits = "peakcalling/macs/{group}-{species}_summits.bed",
-        script = "peakcalling/macs/{group}-{species}_model.r",
-        pdf = "peakcalling/macs/{group}-{species}_model.pdf",
-        treat_bg = "peakcalling/macs/{group}-{species}_treat_pileup.bdg",
-        cntrl_bg = "peakcalling/macs/{group}-{species}_control_lambda.bdg"
-    params:
-        bw = config["macs2"]["bw"],
-        llocal = config["macs2"]["llocal"],
-        qscore = config["macs2"]["fdr"]
-    conda:
-        "envs/macs2.yaml"
-    log: "logs/macs2/macs2-{group}-{species}.log"
-    shell: """
-        (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group}-{wildcards.species} --SPMR --bw {params.bw} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
-        (Rscript peakcalling/macs/{wildcards.group}-{wildcards.species}_model.r) &>> {log}
-        (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_peaks.narrowPeak) &>> {log}
-        (sed -i -e 's/peakcalling\/macs\///g' peakcalling/macs/{wildcards.group}-{wildcards.species}_summits.bed) &>> {log}
-        """
-
 def selectchrom(wc):
     if wc.strand not in ["SENSE","ANTISENSE"]:
         if wc.norm=="sicounts":
@@ -326,59 +178,10 @@ rule bedgraph_to_bigwig:
         bedGraphToBigWig {input.bg} {input.chrsizes} {output}
         """
 
-rule get_si_pct:
-    input:
-        plmin = "coverage/counts/{sample}_{factor}-chipnexus-counts-midpoints.bedgraph",
-        SIplmin = "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-midpoints.bedgraph"
-    output:
-        temp("qual_ctrl/all/{sample}_{factor}-spikeincounts.tsv")
-    params:
-        group = lambda wc: SAMPLES[wc.sample]["group"]
-    log: "logs/get_si_pct/get_si_pct-{sample}_{factor}.log"
-    shell: """
-        (echo -e "{wildcards.sample}\t{params.group}\t" $(awk 'BEGIN{{FS=OFS="\t"; ex=0; si=0}}{{if(NR==FNR){{si+=$4}} else{{ex+=$4}}}} END{{print ex+si, ex, si}}' {input.SIplmin} {input.plmin}) > {output}) &> {log}
-        """
-
-rule cat_si_pct:
-    input:
-        expand("qual_ctrl/all/{sample}_{factor}-spikeincounts.tsv", sample=SAMPLES, factor=config["factor"])
-    output:
-        "qual_ctrl/all/spikein-counts.tsv"
-    log: "logs/cat_si_pct.log"
-    shell: """
-        (cat {input} > {output}) &> {log}
-        """
-
-rule plot_si_pct:
-    input:
-        "qual_ctrl/all/spikein-counts.tsv"
-    output:
-        plot = "qual_ctrl/{status}/{status}-spikein-plots.svg",
-        stats = "qual_ctrl/{status}/{status}-spikein-stats.tsv"
-    params:
-        samplelist = lambda wc : [k for k,v in SAMPLES.items() if v["spikein"]=="y"] if wc.status=="all" else [k for k,v in PASSING.items() if v["spikein"]=="y"],
-        conditions = conditiongroups_si,
-        controls = controlgroups_si
-    script: "scripts/plotsipct.R"
-
-rule build_genic_annotation:
-    input:
-        transcripts = config["genome"]["transcripts"],
-        orfs = config["genome"]["orf-annotation"],
-        chrsizes = config["genome"]["chrsizes"]
-    output:
-        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
-    params:
-        windowsize = config["genic-windowsize"]
-    log : "logs/build_genic_annotation.log"
-    shell: """
-        (python scripts/make_genic_annotation.py -t {input.transcripts} -o {input.orfs} -d {params.windowsize} -g {input.chrsizes} -p {output}) &> {log}
-        """
-
 rule classify_peaks_genic:
     input:
         peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
     params:
         prefix = config["combinedgenome"]["experimental_prefix"]
     output:
@@ -391,7 +194,7 @@ rule classify_peaks_intragenic:
     input:
         peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
         orfs = config["genome"]["orf-annotation"],
-        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
     params:
         prefix = config["combinedgenome"]["experimental_prefix"]
     output:
@@ -400,26 +203,13 @@ rule classify_peaks_intragenic:
         bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $16=="+"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $2+$10-$12}} $16=="-"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $13-$2+$10}}' > {output}
         """
 
-rule build_intergenic_annotation:
-    input:
-        transcripts = config["genome"]["transcripts"],
-        chrsizes = config["genome"]["chrsizes"]
-    output:
-        os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"
-    params:
-        genic_up = config["genic-windowsize"]
-    log: "logs/build_intergenic_annotation.log"
-    shell: """
-        (bedtools slop -s -l {params.genic_up} -r 0 -i {input.transcripts} -g <(sort -k1,1 {input.chrsizes})| sort -k1,1 -k2,2n | bedtools complement -i stdin -g <(sort -k1,1 {input.chrsizes}) > {output}) &> {log}
-        """
-
 rule classify_peaks_intergenic:
     input:
         peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed",
+        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"),
         transcripts = config["genome"]["transcripts"],
         orfs = config["genome"]["orf-annotation"],
-        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
     params:
         prefix = config["combinedgenome"]["experimental_prefix"]
     output:
@@ -811,4 +601,6 @@ rule plot_ratios:
 
 include: "rules/chip-nexus_clean_reads.smk"
 include: "rules/chip-nexus_align.smk"
+include: "rules/chip-nexus_fastqc.smk"
+include: "rules/chip-nexus_peakcalling.smk"
 
