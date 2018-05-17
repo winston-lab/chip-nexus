@@ -11,7 +11,7 @@ rule clean_reads:
         trim_qual = config["cutadapt"]["trim_qual"]
     threads: config["threads"]
     shell: """
-        (cutadapt --front=^NNNNNCTGA --error-rate=0 --no-trim --discard-untrimmed --cores={threads} {input} | cutadapt --adapter={params.adapter} --error-rate=0.1 --nextseq-trim={params.trim_qual} --minimum-length=11 --cores={threads} -o {output.fastq} -) &> {output.log}
+        cutadapt --front=^NNNNNCTGA --error-rate=0 --no-trim --discard-untrimmed --cores={threads} {input} | cutadapt --adapter={params.adapter} --error-rate=0.1 --nextseq-trim={params.trim_qual} --minimum-length=11 --cores={threads} -o {output.fastq} - &> {output.log}
        """
 
 rule extract_molecular_barcode:

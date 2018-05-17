@@ -57,13 +57,14 @@ rule bam_separate_species:
         bam = "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam",
         bai = "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam.bai",
         chrsizes = config["combinedgenome"]["chrsizes"]
-    params:
-        filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["experimental_prefix"],
     output:
-        "alignment/{sample}-{species}only.bam"
+        "alignment/{sample}_{factor}-chipnexus-noPCRduplicates-{species}.bam",
+    params:
+        filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species=="experimental" else config["combinedgenome"]["experimental_prefix"],
+        prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.species=="experimental" else config["combinedgenome"]["spikein_prefix"]
     threads: config["threads"]
     log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
     shell: """
-        (samtools view -h {input.bam} $(grep {wildcards.species} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}' | sed 's/{wildcards.species}//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
+        (samtools view -h {input.bam} $(grep {params.prefix} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}' | sed 's/{params.prefix}//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
         """
 
