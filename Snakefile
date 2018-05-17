@@ -5,6 +5,8 @@ import itertools
 
 configfile: "config.yaml"
 
+FACTOR = config["factor"]
+
 SAMPLES = config["samples"]
 PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"] == "pass"}
 GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
@@ -36,40 +38,38 @@ onsuccess:
 
 rule all:
     input:
-        #FastQC
-        'qual_ctrl/fastqc/per_base_sequence_content.svg',
+        ##FastQC
+        #'qual_ctrl/fastqc/per_base_sequence_content.svg',
         #alignment
-        expand("alignment/{sample}-noPCRdup.bam", sample=SAMPLES),
-        #coverage
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
-        #initial QC
-        "qual_ctrl/read_processing-loss.svg",
-        expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
-        expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
-        #macs2
-        expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
-        #categorise peaks
-        expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
-        expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
-        # datavis
-        expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
-        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
-        #differential binding of peaks
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], fmt=["tsv", "bed"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged", "down"], fmt=["tsv", "bed"]),
-        #categorize DB peaks
-        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
-        expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
-        #DB summary
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
-        expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
-        expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
-
-
+        expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam", sample=SAMPLES, factor=FACTOR),
+        ##coverage
+        #expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
+        #expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
+        ##initial QC
+        #"qual_ctrl/read_processing-loss.svg",
+        #expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
+        #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
+        ##macs2
+        #expand("peakcalling/macs/{group}-{species}_peaks.narrowPeak", group = GROUPS, species=[config["combinedgenome"]["experimental_prefix"],config["combinedgenome"]["spikein_prefix"]]),
+        ##categorise peaks
+        #expand("peakcalling/macs/{category}/{group}-exp-peaks-{category}.tsv", group=GROUPS, category=CATEGORIES),
+        #expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
+        ## datavis
+        #expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
+        #expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus-{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=config["factor"], status=["all", "passing"]),
+        ##differential binding of peaks
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-libsizenorm.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-qcplots-spikenorm.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], fmt=["tsv", "bed"]),
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}.{{fmt}}", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged", "down"], fmt=["tsv", "bed"]),
+        ##categorize DB peaks
+        #expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-libsizenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
+        #expand(expand("diff_binding/{condition}-v-{control}/{{category}}/{condition}-v-{control}-{{factor}}-chipnexus-results-spikenorm-{{direction}}-{{category}}.bed", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"], direction=["up","unchanged","down"], category=CATEGORIES),
+        ##DB summary
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
+        #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
+        #expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
 def plotcorrsamples(wc):
     if wc.condition=="all":
@@ -107,33 +107,6 @@ rule fastqc_raw:
     shell: """
         (mkdir -p qual_ctrl/fastqc/raw/{wildcards.sample}) &> {log}
         (fastqc -a <(echo -e "adapter\t{params.adapter}") --nogroup --extract -t {threads} -o qual_ctrl/fastqc/raw/{wildcards.sample} {input}) &>> {log}
-        """
-
-rule remove_adapter:
-    input:
-        lambda wc: SAMPLES[wc.sample]["fastq"]
-    output:
-        fq = temp("fastq/cleaned/{sample}-noadapter.fastq"),
-        log =  "logs/remove_adapter/remove_adapter-{sample}.log"
-    params:
-        adapter = config["cutadapt"]["adapter"],
-        trim_qual = config["cutadapt"]["trim_qual"]
-    shell: """
-       (less {input} | grep -B 1 -A 2 --no-group-separator '^.....CTGA' | cutadapt -e 0.1 -a {params.adapter} --nextseq-trim={params.trim_qual} -m 11 -o {output.fq} -) &> {output.log}
-       """
-
-rule remove_molec_barcode:
-    input:
-        "fastq/cleaned/{sample}-noadapter.fastq"
-    output:
-        fq = "fastq/cleaned/{sample}-cleaned.fastq.gz",
-        barcodes = "qual_ctrl/molec_barcode/barcodes-{sample}.tsv",
-        ligation = "qual_ctrl/molec_barcode/ligation-{sample}.tsv"
-    threads: config["threads"]
-    log: "logs/remove_molec_barcode/removeMBC-{sample}.log"
-    shell: """
-        (python scripts/extractNexusMolecularBarcode.py {input} fastq/cleaned/{wildcards.sample}-cleaned.fastq {output.barcodes} {output.ligation}) &> {log}
-        (pigz -f fastq/cleaned/{wildcards.sample}-cleaned.fastq) &>> {log}
         """
 
 rule fastqc_cleaned:
@@ -220,47 +193,6 @@ rule plot_fastqc_summary:
         # kmer = 'qual_ctrl/fastqc/kmer_content.svg',
     script: "scripts/fastqc_summary.R"
 
-rule bowtie2_build:
-    input:
-        fasta = config["combinedgenome"]["fasta"]
-    output:
-        expand(config["bowtie2"]["index-path"] + "/{{basename}}.{num}.bt2", num=[1,2,3,4]),
-        expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
-    params:
-        idx_path = config["bowtie2"]["index-path"]
-    log: "logs/bowtie2_build.log"
-    shell: """
-        (bowtie2-build {input.fasta} {params.idx_path}/{wildcards.basename}) &> {log}
-        """
-
-rule align:
-    input:
-        expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".{num}.bt2", num=[1,2,3,4]),
-        expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".rev.{num}.bt2", num=[1,2]),
-        fastq = "fastq/cleaned/{sample}-cleaned.fastq.gz"
-    output:
-        bam = temp("alignment/{sample}-unique.bam"),
-        aligned_fq = "fastq/aligned/{sample}-aligned.fastq.gz",
-        unaligned_fq = "fastq/unaligned/{sample}-unaligned.fastq.gz",
-        log = "logs/align/align-{sample}.log"
-    params:
-        outbase =  config["bowtie2"]["index-path"] + "/" +  config["combinedgenome"]["name"],
-        minmapq = config["bowtie2"]["minmapq"]
-    threads : config["threads"]
-    shell: """
-        (bowtie2 -x {params.outbase} -U {input.fastq} --al-gz {output.aligned_fq} --un-gz {output.unaligned_fq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
-        """
-
-rule remove_PCR_duplicates:
-    input:
-        "alignment/{sample}-unique.bam"
-    output:
-        "alignment/{sample}-noPCRdup.bam"
-    log: "logs/remove_PCR_duplicates/removePCRduplicates-{sample}.log"
-    shell: """
-        (python scripts/removePCRdupsFromBAM.py {input} {output}) &> {log}
-        """
-
 rule read_processing_numbers:
     input:
         adapter = expand("logs/remove_adapter/remove_adapter-{sample}.log", sample=SAMPLES),
@@ -286,32 +218,6 @@ rule plot_read_processing:
         loss_out  = "qual_ctrl/read_processing-loss.svg",
     script: "scripts/processing_summary.R"
 
-#indexing is required for separating species by samtools view
-rule index_bam:
-    input:
-        bam = "alignment/{sample}-noPCRdup.bam",
-    output:
-        "alignment/{sample}-noPCRdup.bam.bai"
-    log : "logs/index_bam/index_bam-{sample}.log"
-    shell: """
-        (samtools index {input.bam}) &> {log}
-        """
-
-#peakcalling programs (MACS2 and Qnexus) require BAM input
-rule bam_separate_species:
-    input:
-        bam = "alignment/{sample}-noPCRdup.bam",
-        bai = "alignment/{sample}-noPCRdup.bam.bai",
-        chrsizes = config["combinedgenome"]["chrsizes"]
-    params:
-        filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["combinedgenome"]["experimental_prefix"],
-    output:
-        "alignment/{sample}-{species}only.bam"
-    threads: config["threads"]
-    log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
-    shell: """
-        (samtools view -h {input.bam} $(grep {wildcards.species} {input.chrsizes} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}' | sed 's/{wildcards.species}//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
-        """
 
 rule get_coverage:
     input:
@@ -902,4 +808,7 @@ rule plot_ratios:
         annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
     script:
         "scripts/ratio.R"
+
+include: "rules/chip-nexus_clean_reads.smk"
+include: "rules/chip-nexus_align.smk"
 
