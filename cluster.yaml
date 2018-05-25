@@ -1,0 +1,127 @@
+__default__:
+    queue : "short"
+    time : 60
+    n : 1
+    mem : 2000
+    name : "{rule}.{wildcards}"
+    log : "logs/cluster/{rule}.{wildcards}.log"
+    err : "logs/cluster/{rule}.{wildcards}.err"
+
+fastqc_pre_and_unaligned:
+    time : 15
+    n : 2
+    mem : 4000
+
+clean_reads:
+    time : 15
+    n: 4
+    mem : 2000
+
+extract_molecular_barcode:
+    time : 120
+    n : 1
+    mem : 2000
+
+fastqc_aligned:
+    time : 15
+    n : 2
+    mem : 4000
+
+read_processing_numbers:
+    time: 5
+    n: 1
+    mem: 4000
+
+plot_read_processing:
+    time: 5
+    n: 1
+    mem: 4000
+
+plot_fastqc_summary:
+    time: 10
+    n: 1
+    mem: 8000
+
+align:
+    time : 40
+    n : 4
+    mem : 2000
+
+remove_PCR_duplicates:
+    time : 15
+    mem : 4000
+
+bam_separate_species:
+    time : 15
+    n: 2
+    mem : 1000
+
+crosslink_coverage:
+    time : 10
+    mem : 2000
+
+protection_coverage:
+    time : 10
+    mem : 2000
+
+midpoint_coverage:
+    time : 10
+    mem : 2000
+
+normalize_genome_coverage:
+    time : 5
+    mem : 2000
+
+make_stranded_bedgraph:
+    time: 15
+    mem: 2000
+
+bedgraph_to_bigwig:
+    time : 2
+    mem : 2000
+
+callpeaks_macs2:
+    time : 60
+    mem : 8000
+
+differential_binding:
+    time: 30
+    mem: 8000
+
+diffbind_results_to_narrowpeak:
+  time: 5
+  mem: 4000
+
+map_to_windows:
+    time: 20
+    mem: 4000
+
+join_window_counts:
+    time: 15
+    mem: 4000
+
+plot_scatter_plots:
+    time : 60
+    mem : 12000
+
+
+compute_matrix:
+    time : 20
+    n : 1
+    mem : 2000
+
+plot_figures:
+    time : 90
+    mem : 16000
+
+summarise_db_results:
+    time: 15
+    mem : 6000
+
+ratio_counts:
+    time: 10
+    mem: 4000
+
+plot_ratios:
+    time: 20
+    mem: 6000

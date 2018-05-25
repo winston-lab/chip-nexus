@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+localrules: bowtie2_build,
+    index_bam
+
 rule bowtie2_build:
     input:
         fasta = config["combinedgenome"]["fasta"]
