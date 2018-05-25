@@ -28,8 +28,6 @@ localrules:
     all,
     fastqc_aggregate,
     make_stranded_annotations,
-    get_si_pct, cat_si_pct,
-    index_bam,
     classify_peaks_genic, classify_peaks_intragenic, classify_peaks_intergenic,
     separate_de_peaks,
     get_de_genic, get_de_intragenic, get_de_intergenic,
@@ -51,9 +49,9 @@ rule all:
         #coverage
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=config["factor"], norm=["counts","libsizenorm","spikenorm"], strand=["plus","minus","protection","midpoints"]),
-        ##initial QC
-        #"qual_ctrl/read_processing-loss.svg",
-        #expand("qual_ctrl/{status}/{status}-spikein-plots.svg", status=["all","passing"]),
+        #read processing stats
+        "qual_ctrl/read_processing/" + FACTOR + "-chipnexus_read-processing-loss.svg",
+        expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=["all","passing"]),
         #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-libsizenorm-correlations.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         #expand(expand("qual_ctrl/{{status}}/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-{{status}}-window-{{windowsize}}-spikenorm-correlations.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all", "passing"], factor=config["factor"], windowsize=config["corr-windowsizes"]),
         ##categorise peaks
@@ -217,6 +215,7 @@ rule plot_ratios:
 include: "rules/chip-nexus_clean_reads.smk"
 include: "rules/chip-nexus_alignment.smk"
 include: "rules/chip-nexus_fastqc.smk"
+include: "rules/chip-nexus_library-processing-summary.smk"
 include: "rules/chip-nexus_peakcalling.smk"
 include: "rules/chip-nexus_genome_coverage.smk"
 include: "rules/chip-nexus_datavis.smk"
