@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+localrules: combine_peaks
+
 rule callpeaks_macs2:
     input:
         bam = lambda wc: expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates-{species}.bam", sample=[k for k,v in PASSING.items() if v["group"]==wc.group], factor=FACTOR, species=wc.species),
@@ -25,3 +27,15 @@ rule callpeaks_macs2:
         (sed -i -e 's/peakcalling\/macs\/{wildcards.group}\///g' {output.peaks}) &>> {log}
         (sed -i -e 's/peakcalling\/macs\/{wildcards.group}\///g' {output.summits}) &>> {log}
         """
+
+rule combine_peaks:
+    input:
+        cond = "peakcalling/macs/{condition}/{condition}_{type}-{factor}-chipnexus_peaks.narrowPeak",
+        ctrl = "peakcalling/macs/{control}/{control}_{type}-{factor}-chipnexus_peaks.narrowPeak",
+    output:
+        "diff_binding/{condition}-v-{control}/{condition}-v-{control}_{type}-{factor}-peaks.bed"
+    log: "logs/combine_peaks/combine_peaks-{condition}-v-{control}-{type}.log"
+    shell: """
+        (bedtools multiinter -i {input} | bedtools merge -i stdin | sort -k1,1 -k2,2n > {output}) &> {log}
+        """
+

@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-rule combine_peaks:
-    input:
-        expand("peakcalling/macs/{group}-{{species}}_peaks.narrowPeak", group=GROUPS)
-    output:
-        "peakcalling/macs/allpeaks-{species}.bed"
-    shell: """
-        bedtools multiinter -i {input} | bedtools merge -i stdin | sort -k1,1 -k2,2n > {output}
-        """
-
 rule map_counts_to_peaks:
     input:
         bed = "peakcalling/macs/allpeaks-{species}.bed",

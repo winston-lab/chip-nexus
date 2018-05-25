@@ -1,43 +1,53 @@
 #!/usr/bin/env python
 
-rule classify_peaks_genic:
+localrules: classify_genic_peaks, classify_intragenic_peaks, classify_intergenic_peaks
+
+peak_fields = "peak_chrom\tpeak_start\tpeak_end\tpeak_name\tpeak_score\tpeak_strand\tpeak_enrichment\tpeak_logpval\tpeak_logqval\tpeak_summit\t"
+
+rule classify_genic_peaks:
     input:
-        peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
-        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
-    params:
-        prefix = config["combinedgenome"]["experimental_prefix"]
+        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        peaks = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks.narrowPeak",
     output:
-        "peakcalling/macs/genic/{group}-exp-peaks-genic.tsv"
+        table = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-genic.tsv",
+        narrowpeak = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-genic.narrowpeak",
+        bed = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-genic-summits.bed",
+    log: "logs/classify_peaks/classify_genic_peaks-{group}.log"
     shell: """
-        bedtools intersect -a {input.peaks} -b {input.annotation} -wo | cut --complement -f11-13,15-17 > {output}
+        (bedtools intersect -a {input.peaks} -b {input.annotation} -wo | cut --complement -f17 | cat <(echo -e "{peak_fields}genic_chrom\tgenic_start\tgenic_end\tgenic_name\tgenic_score\tgenic_strand") - > {output.table}) &> {log}
+        (bedtools intersect -a {input.peaks} -b {input.annotation} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
-rule classify_peaks_intragenic:
+rule classify_intragenic_peaks:
     input:
-        peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
-        orfs = config["genome"]["orf-annotation"],
-        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
-    params:
-        prefix = config["combinedgenome"]["experimental_prefix"]
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        orf_anno = config["genome"]["orf-annotation"],
+        peaks = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks.narrowPeak",
     output:
-        "peakcalling/macs/intragenic/{group}-exp-peaks-intragenic.tsv"
+        table = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intragenic.tsv",
+        narrowpeak = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intragenic.narrowpeak",
+        bed = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intragenic-summits.bed",
+    log: "logs/classify_peaks/classify_intragenic_peaks-{group}.log"
     shell: """
-        bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $16=="+"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $2+$10-$12}} $16=="-"{{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $14, $13-$2+$10}}' > {output}
+        (bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b <(cut -f1-6 {input.orf_anno}) -wo | awk 'BEGIN{{FS=OFS="\t"}} {{summit=$2+$10}} $16=="+"{{$17=summit-$12}} $16=="-"{{$17=$13-(summit+1)}} {{print $0}}' | cat <(echo -e "{peak_fields}orf_chrom\torf_start\torf_end\torf_name\torf_score\torf_strand\tatg_to_peak_dist") - > {output.table}) &> {log}
+        (bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b <(cut -f1-6 {input.orf_anno}) -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
-rule classify_peaks_intergenic:
+rule classify_intergenic_peaks:
     input:
-        peaks = "peakcalling/macs/{group}-" + config["combinedgenome"]["experimental_prefix"] + "_peaks.narrowPeak",
-        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"),
-        transcripts = config["genome"]["transcripts"],
-        orfs = config["genome"]["orf-annotation"],
-        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed")
-    params:
-        prefix = config["combinedgenome"]["experimental_prefix"]
+        intergenic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"),
+        transcript_anno = config["genome"]["transcripts"],
+        orf_anno = config["genome"]["orf-annotation"],
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        peaks = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks.narrowPeak",
     output:
-        "peakcalling/macs/intergenic/{group}-exp-peaks-intergenic.tsv"
+        table = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intergenic.tsv",
+        narrowpeak = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intergenic.narrowpeak",
+        bed = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intergenic-summits.bed",
+    log: "logs/classify_peaks/classify_intergenic_peaks-{group}.log"
     shell: """
-        bedtools intersect -a {input.peaks} -b {input.transcripts} {input.orfs} -wa -v | bedtools intersect -a stdin -b {input.genic_anno} -wa -v | bedtools intersect -a stdin -b {input.annotation} -wa > {output}
+        (bedtools intersect -a {input.peaks} -b {input.transcript_anno} {input.orf_anno} {input.genic_anno} -v | bedtools intersect -a stdin -b {input.intergenic_anno} -u | cat <(echo -e {peak_fields}) - > {output.table}) &> {log}
+        (bedtools intersect -a {input.peaks} -b {input.transcript_anno} {input.orf_anno} {input.genic_anno} -v | bedtools intersect -a stdin -b {input.intergenic_anno} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
 rule peakstats:

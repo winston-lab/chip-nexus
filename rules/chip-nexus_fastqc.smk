@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+localrules: fastqc_aggregate,
+
 rule fastqc_pre_and_unaligned:
     input:
         lambda wc: {
