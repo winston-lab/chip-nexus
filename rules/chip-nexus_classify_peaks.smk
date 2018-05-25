@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-localrules: classify_genic_peaks, classify_intragenic_peaks, classify_intergenic_peaks
+localrules: classify_genic_peaks, classify_intragenic_peaks, classify_intergenic_peaks,
+    classify_genic_diffbind_peaks, classify_intragenic_diffbind_peaks, classify_intergenic_diffbind_peaks
 
 peak_fields = "peak_chrom\tpeak_start\tpeak_end\tpeak_name\tpeak_score\tpeak_strand\tpeak_enrichment\tpeak_logpval\tpeak_logqval\tpeak_summit\t"
 
@@ -63,54 +64,52 @@ rule peakstats:
     script:
         "scripts/peakstats.R"
 
-
-rule get_de_genic:
+rule classify_genic_diffbind_peaks:
     input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
-        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv"
+        annotation = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
+        results = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.tsv",
     output:
-        "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-genic.tsv"
-    log : "logs/get_de_genic/get_de_genic-{condition}-v-{control}-{norm}.log"
+        results = "diff_binding/{condition}-v-{control}/{norm}/genic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-genic-{direction}.tsv",
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/genic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-genic-{direction}.narrowpeak",
+        bed = "diff_binding/{condition}-v-{control}/{norm}/genic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-genic-{direction}-summits.bed",
+    log : "logs/classify_diffbind_peaks/classify_genic_diffbind_peaks-{condition}-v-{control}_{norm}-{direction}.log"
     shell: """
-        (bedtools intersect -a {input.peaks} -b {input.annotation} -wo | awk 'BEGIN{{FS=OFS="\t"}} {{print $4, $8, $9, $10}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\ttranscript_start\ttranscript_end\ttranscript_name") - > {output}) &> {log}
+        (tail -n +2 {input.results} | paste - <(cut -f10 {input.narrowpeak}) | bedtools intersect -a stdin -b {input.annotation} -wo | cut --complement -f22 | cat <(paste <(head -n 1 {input.results}) <(echo -e "peak_summit\tgenic_chrom\tgenic_start\tgenic_end\tgenic_name\tgenic_score\tgenic_strand")) - > {output.results}) &> {log}
+        (bedtools intersect -a {input.narrowpeak} -b {input.annotation} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
-rule get_de_intragenic:
+rule classify_intragenic_diffbind_peaks:
     input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
-        orfs = config["genome"]["orf-annotation"],
-        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
-        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv",
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        orf_anno = config["genome"]["orf-annotation"],
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
+        results = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.tsv",
     output:
-        "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intragenic.tsv",
-    log: "logs/get_de_intragenic/get_de_intragenic-{condition}-v-{control}-{norm}.log"
+        results = "diff_binding/{condition}-v-{control}/{norm}/intragenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intragenic-{direction}.tsv",
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/intragenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intragenic-{direction}.narrowpeak",
+        bed = "diff_binding/{condition}-v-{control}/{norm}/intragenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intragenic-{direction}-summits.bed",
+    log : "logs/classify_diffbind_peaks/classify_intragenic_diffbind_peaks-{condition}-v-{control}_{norm}-{direction}.log"
     shell: """
-        (bedtools intersect -a {input.peaks} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orfs} -wo | awk 'BEGIN{{FS=OFS="\t"}} $12=="+"{{print $4, $8, $9, $10, ((($2+1)+$3)/2)-$8}} $12=="-"{{print $4, $8, $9, $10, $9-((($2+1)+$3)/2)}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\tORF_start\tORF_end\tORF_name\tdist_ATG_to_peak") - > {output}) &> {log}
+        (tail -n +2 {input.results} | paste - <(cut -f10 {input.narrowpeak}) | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b <(cut -f1-6 {input.orf_anno}) -wo | awk 'BEGIN{{FS=OFS="\t"}} {{summit=$2+$15}} $6=="+"{{$22=summit-$17}} $6=="-"{{$22=$18-(summit+1)}} {{print $0}}'  | cat <(paste <(head -n 1 {input.results}) <(echo -e "peak_summit\torf_chrom\torf_start\torf_end\torf_name\torf_score\torf_strand\tatg_to_peak_dist")) - > {output.results}) &> {log}
+        (bedtools intersect -a {input.narrowpeak} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orf_anno} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
-rule get_de_intergenic:
+rule classify_intergenic_diffbind_peaks:
     input:
-        peaks = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.bed",
-        annotation = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed",
-        transcripts = config["genome"]["transcripts"],
-        orfs = config["genome"]["orf-annotation"],
-        genic_anno = os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed",
-        totalresults = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all.tsv",
+        intergenic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "intergenic-regions.bed"),
+        transcript_anno = config["genome"]["transcripts"],
+        orf_anno = config["genome"]["orf-annotation"],
+        genic_anno = build_annotations(os.path.dirname(config["genome"]["transcripts"]) + "/" + config["combinedgenome"]["experimental_prefix"] + "genic-regions.bed"),
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
+        results = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.tsv",
     output:
-        "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intergenic.tsv",
-    log : "logs/get_de_intergenic/get_de_intergenic-{condition}-v-{control}-{norm}.log"
+        results = "diff_binding/{condition}-v-{control}/{norm}/intergenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intergenic-{direction}.tsv",
+        narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/intergenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intergenic-{direction}.narrowpeak",
+        bed = "diff_binding/{condition}-v-{control}/{norm}/intergenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intergenic-{direction}-summits.bed",
+    log : "logs/classify_diffbind_peaks/classify_intragenic_diffbind_peaks-{condition}-v-{control}_{norm}-{direction}.log"
     shell: """
-        (bedtools intersect -a {input.peaks} -b {input.transcripts} {input.orfs} {input.genic_anno} -wa -v | bedtools intersect -a stdin -b {input.annotation} -wo | awk 'BEGIN{{FS=OFS="\t"}} {{print $4, $8, $9}}' | sort -k1,1 | join -t $'\t' <(tail -n +2 {input.totalresults} | cut --complement -f8-10 | sort -k1,1) - | sort -k8,8nr | cat <(echo -e "peak_name\tchrom\tstrand\tpeak_start\tpeak_end\tmeanExpr\tlog2FoldChange\tlogpadj\t{wildcards.condition}\t{wildcards.control}\tregion_start\tregion_end") - > {output}) &> {log}
-        """
-
-rule get_de_category_bed:
-    input:
-        "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-{category}.tsv"
-    output:
-        "diff_binding/{condition}-v-{control}/{category}/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-{direction}-{category}.bed"
-    log: "logs/get_category_bed/get_category_bed-{condition}-v-{control}-{norm}-{direction}-{category}.log"
-    shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}} NR>1 {{print $2, $4, $5, $1, $7":"$8, $3}}' {input} | sort -k1,1 -k2,2n  > {output}) &> {log}
+        (tail -n +2 {input.results} | paste - <(cut -f10 {input.narrowpeak}) | bedtools intersect -a stdin -b {input.transcript_anno} {input.orf_anno} {input.genic_anno} -v | bedtools intersect -a stdin -b {input.intergenic_anno} -u | cat <(paste <(head -n 1 {input.results}) <(echo "peak_summit")) - > {output.results}) &> {log}
+        (bedtools intersect -a {input.narrowpeak} -b {input.transcript_anno} {input.orf_anno} {input.genic_anno} -v | bedtools intersect -a stdin -b {input.intergenic_anno} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
