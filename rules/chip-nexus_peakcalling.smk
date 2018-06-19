@@ -20,7 +20,7 @@ rule callpeaks_macs2:
         qscore = config["macs2"]["fdr"]
     conda:
         "../envs/macs2.yaml"
-    log: "logs/macs2/macs2-{group}-{species}.log"
+    log: "logs/macs2/macs2_{group}-{species}-{factor}.log"
     shell: """
         (macs2 callpeak -t {input.bam} -f BAM -g $(awk '{{sum += $2}} END {{print sum}}' {input.chrsizes}) --keep-dup all --bdg -n peakcalling/macs/{wildcards.group}/{wildcards.group}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} --llocal {params.llocal} --call-summits -q {params.qscore}) &> {log}
         (Rscript {output.script}) &>> {log}
@@ -34,7 +34,7 @@ rule combine_peaks:
         ctrl = "peakcalling/macs/{control}/{control}_{type}-{factor}-chipnexus_peaks.narrowPeak",
     output:
         "diff_binding/{condition}-v-{control}/{condition}-v-{control}_{type}-{factor}-peaks.bed"
-    log: "logs/combine_peaks/combine_peaks-{condition}-v-{control}-{type}.log"
+    log: "logs/combine_peaks/combine_peaks-{condition}-v-{control}-{type}-{factor}.log"
     shell: """
         (bedtools multiinter -i {input} | bedtools merge -i stdin | sort -k1,1 -k2,2n > {output}) &> {log}
         """

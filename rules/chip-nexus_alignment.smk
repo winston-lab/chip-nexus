@@ -11,7 +11,7 @@ rule bowtie2_build:
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
     params:
         idx_path = config["bowtie2"]["index-path"]
-    log: "logs/bowtie2_build.log"
+    log: "logs/bowtie2_build-{basename}.log"
     shell: """
         (bowtie2-build {input.fasta} {params.idx_path}/{wildcards.basename}) &> {log}
         """
@@ -20,10 +20,10 @@ rule align:
     input:
         expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".{num}.bt2", num=[1,2,3,4]),
         expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".rev.{num}.bt2", num=[1,2]),
-        fastq = expand("fastq/cleaned/{{sample}}_{factor}-chipnexus-clean.fastq.gz", factor=FACTOR)
+        fastq = f"fastq/cleaned/{{sample}}_{FACTOR}-chipnexus-clean.fastq.gz"
     output:
-        bam = temp(expand("alignment/{{sample}}_{factor}-chipnexus-uniquemappers.bam", factor=FACTOR)),
-        unaligned_fastq = expand("fastq/{{sample}}_{factor}-chipnexus-unaligned.fastq.gz", factor=FACTOR),
+        bam = temp(f"alignment/{{sample}}_{FACTOR}-chipnexus-uniquemappers.bam"),
+        unaligned_fastq = f"fastq/{{sample}}_{FACTOR}-chipnexus-unaligned.fastq.gz",
         log = "logs/align/align_{sample}.log"
     params:
         outbase =  config["bowtie2"]["index-path"] + "/" +  config["combinedgenome"]["name"],
@@ -35,9 +35,9 @@ rule align:
 
 rule remove_PCR_duplicates:
     input:
-        "alignment/{sample}_{factor}-chipnexus-uniquemappers.bam"
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-uniquemappers.bam"
     output:
-        "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam"
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam"
     log: "logs/remove_PCR_duplicates/remove_PCR_duplicates-{sample}.log"
     shell: """
         (python scripts/removePCRdupsFromBAM.py {input} {output}) &> {log}
@@ -46,9 +46,9 @@ rule remove_PCR_duplicates:
 #indexing is required for separating species by samtools view
 rule index_bam:
     input:
-        "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam"
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam"
     output:
-        "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam.bai"
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai"
     log : "logs/index_bam/index_bam-{sample}.log"
     shell: """
         (samtools index {input}) &> {log}
@@ -57,11 +57,11 @@ rule index_bam:
 #peakcalling programs (MACS2 and Qnexus) require BAM input
 rule bam_separate_species:
     input:
-        bam = "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam",
-        bai = "alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam.bai",
+        bam = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam",
+        bai = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai",
         chrsizes = config["combinedgenome"]["chrsizes"]
     output:
-        "alignment/{sample}_{factor}-chipnexus-noPCRduplicates-{species}.bam",
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-{{species}}.bam",
     params:
         filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species=="experimental" else config["combinedgenome"]["experimental_prefix"],
         prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.species=="experimental" else config["combinedgenome"]["spikein_prefix"]

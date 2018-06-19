@@ -99,7 +99,6 @@ def cluster_samples(status, norm, cluster_groups, cluster_strands):
             ll.append([sample + "-" + "antisense" for sample in sublist])
     return(list(itertools.chain(*ll)))
 
-
 rule make_stranded_genome:
     input:
         exp = config["genome"]["chrsizes"],

@@ -9,7 +9,7 @@ rule map_counts_to_peaks:
         bg = lambda wc: "coverage/counts/{sample}_{factor}-chipnexus-counts-midpoints.bedgraph".format(**wc) if wc.type=="experimental" else "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-midpoints.bedgraph".format(**wc)
     output:
         temp("diff_binding/{condition}-v-{control}/{sample}_{type}-{factor}-chipnexus-peakcounts.tsv")
-    log: "logs/map_counts_to_peaks/map_counts_to_peaks-{condition}-v-{control}-{sample}-{type}.log"
+    log: "logs/map_counts_to_peaks/map_counts_to_peaks-{condition}-v-{control}-{sample}-{type}-{factor}.log"
     shell: """
         (bedtools map -a {input.bed} -b {input.bg} -c 4 -o sum > {output}) &> {log}
         """
@@ -21,7 +21,7 @@ rule combine_peak_counts:
         "diff_binding/{condition}-v-{control}/{condition}-v-{control}_allsamples-{type}-{factor}-chipnexus-allpeakcounts.tsv.gz"
     params:
         names = lambda wc: "\t".join(getsamples(wc.control, wc.condition))
-    log: "logs/combine_peak_counts/combine_peak_counts_{condition}-v-{control}_{type}.log"
+    log: "logs/combine_peak_counts/combine_peak_counts_{condition}-v-{control}_{type}-{factor}.log"
     shell: """
         (bedtools unionbedg -i {input} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz -f > {output}) &> {log}
         """
@@ -58,7 +58,7 @@ rule diffbind_results_to_narrowpeak:
     output:
         narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
         summit_bed = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}-summits.bed",
-    log: "logs/diffbind_results_to_narrowpeak/diffbind_results_to_narrowpeak-{condition}-v-{control}_{norm}-{direction}.log"
+    log: "logs/diffbind_results_to_narrowpeak/diffbind_results_to_narrowpeak-{condition}-v-{control}_{norm}-{direction}-{factor}.log"
     shell: """
         median_fragsize=$(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | sort -k1,1n | awk '{{count[NR]=$1;}} END{{if (NR % 2) {{print count[(NR+1)/2]}} else {{print (count[(NR/2)] + count[(NR/2)+1]) / 2.0;}} }}' | xargs printf "%.*f\n" 0)
         (python scripts/diffbind_results_to_narrowpeak.py -i {input.condition_coverage} -j {input.control_coverage} -s $median_fragsize -d {input.diffbind_results} -n {output.narrowpeak} -b {output.summit_bed}) &> {log}

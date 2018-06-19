@@ -1,4 +1,5 @@
 library(tidyverse)
+library(magrittr)
 library(forcats)
 library(viridis)
 library(psych)
@@ -6,41 +7,42 @@ library(seriation)
 library(ggthemes)
 library(gtable)
 
+hmap_ybreaks = function(limits) {
+    if (max(limits)-min(limits) >= 2000) {
+        return(seq(min(limits)+500, max(limits)-500, 500))
+    } else if (between(max(limits)-min(limits), 200, 1999)) {
+        return(seq(min(limits)+100, max(limits)-100, 100))
+    } else {
+        return(round((max(limits)-min(limits))/2))
+    }
+}
+
+
 main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, scaled_length, pct_cutoff, log_transform, pcount,
-                trim_pct, factorlabel, refptlabel, endlabel, cmap, sortmethod, cluster_scale, cluster_samples, cluster_five, cluster_three, k,
+                spread_type, trim_pct, factorlabel, refptlabel, endlabel, cmap, sortmethod, cluster_scale, cluster_samples, cluster_five, cluster_three, k,
                 heatmap_sample_out, heatmap_group_out, meta_sample_protection_out, meta_sample_overlay_protection_out, meta_group_protection_out, meta_sampleclust_protection_out, meta_groupclust_protection_out,
                 meta_sample_stranded_out, meta_sample_overlay_stranded_out, meta_group_stranded_out, meta_sampleclust_stranded_out, meta_groupclust_stranded_out,
                 anno_out, cluster_out){
-    
-    hmap_ybreaks = function(limits){
-        if (max(limits)-min(limits) >= 2000){
-            return(seq(min(limits)+500, max(limits)-500, 500))
-        }
-        else if (between(max(limits)-min(limits), 200, 1999)){
-            return(seq(min(limits)+100, max(limits)-100, 100))
-        }
-        else {
-            return(round((max(limits)-min(limits))/2))
-        }
-    }
-    
+
     hmap = function(df, flimit, strand="both", logtxn=log_transform){
+
         heatmap_base = ggplot(data = df) +
             geom_vline(xintercept = 0, size=1.5)
         if (ptype=="scaled"){
             heatmap_base = heatmap_base +
                 geom_vline(xintercept = scaled_length/1000, size=1.5)
         }
+
         if (logtxn){
             heatmap_base = heatmap_base +
                 geom_raster(aes(x=position, y=new_index, fill=log2(cpm+pcount)), interpolate=FALSE) +
                 scale_fill_viridis(option = cmap, na.value="#FFFFFF00",
-                                   name= if (strand != "both"){bquote(bold(log[2] ~ .(strand) ~ .(factorlabel) ~ "ChIP-nexus" ~ signal))} else {bquote(bold(log[2] ~ .(factorlabel) ~ "ChIP-nexus" ~ protection))},
+                                   name= if (strand != "both"){bquote(bold(log[2] ~ .(strand) ~ .(factorlabel) ~ "ChIP-nexus" ~ signal))}
+                                            else {bquote(bold(log[2] ~ .(factorlabel) ~ "ChIP-nexus" ~ protection))},
                                    limits = c(NA, flimit), oob=scales::squish,
                                    guide=guide_colorbar(title.position="top",
                                                         barwidth=20, barheight=1, title.hjust=0.5))
-        }
-        else {
+        } else {
             heatmap_base = heatmap_base +
                 geom_raster(aes(x=position, y=new_index, fill=cpm), interpolate=FALSE) +
                 scale_fill_viridis(option = cmap, na.value="#FFFFFF00",
@@ -50,7 +52,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                    guide=guide_colorbar(title.position="top",
                                                         barwidth=20, barheight=1, title.hjust=0.5))
         }
-        
+
         heatmap_base = heatmap_base +
             scale_y_reverse(expand=c(0.005,5), breaks=hmap_ybreaks) +
             theme_minimal() +
@@ -83,8 +85,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                               else {"(nt)"}),
                                    limits = c(-upstream/1000, dnstream/1000),
                                    expand=c(0,0.025))
-        }
-        else {
+        } else {
             heatmap_base = heatmap_base +
                 scale_x_continuous(breaks=c(0, (scaled_length/2)/1000, scaled_length/1000),
                                    labels=c(refptlabel, "", endlabel),
@@ -94,55 +95,53 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         }
         return(heatmap_base)
     }
-    
+
     meta = function(df, groupvar="sample", strand="both"){
         if (groupvar=="sample"){
             metagene = ggplot(data = df, aes(x=position, group=sample,
                                              color=group, fill=group))
-        }
-        else if (groupvar=="group"){
+        } else if (groupvar=="group"){
             metagene = ggplot(data = df, aes(x=position, group=group,
                                              color=group, fill=group))
-        }
-        else if (groupvar=="sampleclust"){
+        } else if (groupvar=="sampleclust"){
             metagene = ggplot(data = df %>% mutate(sampleclustid = paste(sample, cluster)),
                               aes(x=position, group=sampleclustid,
                                   color=factor(cluster), fill=factor(cluster)))
-        }
-        else if (groupvar=="groupclust"){
+        } else if (groupvar=="groupclust"){
             metagene = ggplot(data = df %>% mutate(groupclustid = paste(group, cluster)),
                               aes(x=position, group=groupclustid,
                                   color=factor(cluster), fill=factor(cluster)))
         }
-        
+
         metagene = metagene +
-            geom_vline(xintercept = 0, size=1, color="grey65") 
+            geom_vline(xintercept = 0, size=1, color="grey65")
+
         if (ptype=="scaled"){
             metagene = metagene +
-                geom_vline(xintercept = scaled_length/1000, size=1, color="grey65") 
+                geom_vline(xintercept = scaled_length/1000, size=1, color="grey65")
         }
-        
+
         if (strand=="both"){
             metagene = metagene +
-                geom_ribbon(aes(ymin=-mean_antisense, ymax=0), alpha=0.05, size=0) +
-                geom_ribbon(aes(ymin=-mean_antisense-1.96*sem_antisense,
-                                ymax=-mean_antisense+1.96*sem_antisense),
+                geom_ribbon(aes(ymin=-mid_antisense, ymax=0), alpha=0.05, size=0) +
+                geom_ribbon(aes(ymin=-high_antisense,
+                                ymax=-low_antisense),
                                 alpha=0.4, size=0) +
-                geom_line(aes(y=-mean_antisense)) +
-                geom_ribbon(aes(ymin=0, ymax=mean_sense), alpha=0.1, size=0) +
-                geom_ribbon(aes(ymin=mean_sense-1.96*sem_sense,
-                                ymax=mean_sense+1.96*sem_sense),
+                geom_line(aes(y=-mid_antisense)) +
+                geom_ribbon(aes(ymin=0, ymax=mid_sense), alpha=0.1, size=0) +
+                geom_ribbon(aes(ymin=low_sense,
+                                ymax=high_sense),
                                 alpha=0.4, size=0) +
-                geom_line(aes(y=mean_sense)) +
+                geom_line(aes(y=mid_sense)) +
                 geom_hline(yintercept = 0, size=0.5, color="grey65")
-        }
-        else if (strand=="protection"){
+        } else if (strand=="protection"){
             metagene = metagene +
-                geom_ribbon(aes(ymin=mean_protection-1.96*sem_protection,
-                                ymax=mean_protection+1.96*sem_protection),
+                geom_ribbon(aes(ymin=low_protection,
+                                ymax=high_protection),
                                 alpha=0.4, size=0) +
-                geom_line(aes(y=mean_protection))
+                geom_line(aes(y=mid_protection))
         }
+
         metagene = metagene +
             scale_y_continuous(limits = c(NA, NA), name="normalized counts") +
             scale_color_ptol(guide=guide_legend(label.position="top", label.hjust=0.5)) +
@@ -164,6 +163,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                   plot.title = element_text(size=12),
                   plot.subtitle = element_text(size=10, face="plain"),
                   panel.spacing.x = unit(0.8, "cm"))
+
         if (ptype=="absolute"){
             metagene = metagene +
                 scale_x_continuous(breaks=scales::pretty_breaks(n=3),
@@ -174,8 +174,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                               else {"(nt)"}),
                                    limits = c(-upstream/1000, dnstream/1000),
                                    expand=c(0,0))
-        }
-        else {
+        } else {
             metagene = metagene +
                 scale_x_continuous(breaks=c(0, (scaled_length/2)/1000, scaled_length/1000),
                                    labels=c(refptlabel, "", endlabel),
@@ -183,6 +182,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                    limits = c(-upstream/1000, (scaled_length+dnstream)/1000),
                                    expand=c(0,0))
         }
+
         if (groupvar %in% c("sampleclust", "groupclust")){
             metagene = metagene +
                 scale_color_colorblind(guide=guide_legend(label.position="top", label.hjust=0.5)) +
@@ -190,24 +190,24 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         }
         return(metagene)
     }
-    
+
     nest_right_facets = function(ggp, level=2, outer="replicate", inner="annotation"){
         og_grob = ggplotGrob(ggp)
         strip_loc = grep("strip-r", og_grob[["layout"]][["name"]])
         strip = gtable_filter(og_grob, "strip-r", trim=FALSE)
         strip_heights = gtable_filter(og_grob, "strip-r")[["heights"]]
-        
+
         strip_top = min(strip[["layout"]][["t"]])
         strip_bot = max(strip[["layout"]][["b"]])
         strip_x = strip[["layout"]][["r"]][1]
-        
+
         mat = matrix(vector("list", length=(length(strip)*2-1)*level), ncol=level)
         mat[] = list(zeroGrob())
-        
+
         facet_grob = gtable_matrix("rightcol", grobs=mat,
                                    widths=unit(rep(1,level), "null"),
                                    heights=strip_heights)
-        
+
         if(level==3){
             rep_grob_indices = seq(1, length(strip_loc), sum(k))
             for (rep_idx in 1:max_reps){
@@ -227,32 +227,30 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                             t = t, b = b, l = 2, r = 2)
                 }
             }
-        }
-        else if(level==2){
+        } else if(level==2){
             if (outer=="annotation"){
                 outer_grob_indices = 1+lag(k, default=0)
                 n_outer = n_anno
-            }
-            else if (outer=="replicate"){
+            } else if (outer=="replicate"){
                 outer_grob_indices = seq(1, length(strip_loc), sum(k))
                 n_outer = max_reps
             }
+
             for (idx in 1:n_outer){
                 if (outer=="annotation"){
                     t=((k[idx]*2))*(idx-1)+1
                     b=((k[idx]*2))*(idx)-1
-                }
-                else if (outer=="replicate"){
+                } else if (outer=="replicate"){
                     if (inner=="cluster"){
                         t=((k*2))*(idx-1)+1
                         b=((k*2))*(idx)-1
-                    }
-                    else{
+                    } else{
                         t = (n_anno*2)*(idx-1)+1
                         b = (n_anno*2)*(idx)-1
                     }
                 }
-                facet_grob = facet_grob %>%
+
+                facet_grob %<>%
                     gtable_add_grob(grobs = og_grob$grobs[[strip_loc[outer_grob_indices[idx]]]]$grobs[[2]],
                                     t=t, b=b, l=2, r=2)
             }
@@ -260,279 +258,329 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         new_grob = gtable_add_grob(og_grob, facet_grob, t=strip_top, r=strip_x, l=strip_x, b=strip_bot, name='rstrip')
         return(new_grob)
     }
-    
+
     nest_top_facets = function(ggp, level=2, inner="cluster", intype="gg"){
         if (intype=="gg"){
             og_grob = ggplotGrob(ggp)
-        }
-        else if (intype=="gtable"){
+        } else if (intype=="gtable"){
             og_grob = ggp
         }
         strip_loc = grep("strip-t", og_grob[["layout"]][["name"]])
         strip = gtable_filter(og_grob, "strip-t", trim=FALSE)
         strip_widths = gtable_filter(og_grob, "strip-t")[["widths"]]
-        
+
         strip_l = min(strip[["layout"]][["l"]])
         strip_r = max(strip[["layout"]][["r"]])
         strip_y = strip[["layout"]][["t"]][1]
-        
+
         mat = matrix(vector("list", length=(length(strip)*2-1)*level), nrow=level)
         mat[] = list(zeroGrob())
-        
+
         facet_grob = gtable_matrix("toprow", grobs=mat,
                                    heights=unit(rep(1,level), "null"),
                                    widths=strip_widths)
         if (inner=="cluster"){
             outer_grob_indices = 1+lag(k, default=0)
             n_outer = n_anno
-        }
-        else if (inner=="strand"){
-            outer_grob_indices = seq(1, n_groups*2, 2)  
+        } else if (inner=="strand"){
+            outer_grob_indices = seq(1, n_groups*2, 2)
             n_outer = n_groups
         }
+
         for (idx in 1:n_outer){
             if (inner=="cluster"){
                 l=((k[idx]*2))*(idx-1)+1
                 r=((k[idx]*2))*(idx)-1
-            }
-            else if (inner=="strand"){
+            } else if (inner=="strand"){
                 l=4*(idx-1)+1
                 r=4*(idx)-1
             }
-            facet_grob = facet_grob %>%
+            facet_grob %<>%
                 gtable_add_grob(grobs = og_grob$grobs[[strip_loc[outer_grob_indices[idx]]]]$grobs[[1]],
                                 l=l, r=r, t=1, b=1)
         }
         new_grob = gtable_add_grob(og_grob, facet_grob, t=strip_y, r=strip_r, l=strip_l, b=strip_y, name='rstrip')
         return(new_grob)
     }
-    
+
     strip_strand = function(ss){
         words = strsplit(ss, "-")[[1]]
         return(paste(words[1:length(words)-1], collapse="-"))
     }
-        
+
     import = function(path, strand){
         read_tsv(path, col_names=c("group", "sample", "annotation", "index", "position","cpm")) %>%
         mutate(strand=strand) %>%
         filter((sample %in% samplelist | sample %in% lapply(cluster_samples, strip_strand)) & !is.na(cpm))
     }
-    
+
     df = import(in_paths[1], strand="protection") %>%
         bind_rows(import(in_paths[2], strand="sense")) %>%
         bind_rows(import(in_paths[3], strand="antisense")) %>%
-        group_by(annotation) %>% 
-        mutate(annotation_labeled = paste(n_distinct(index), annotation)) %>% 
-        ungroup() %>% 
-        mutate(annotation = annotation_labeled) %>% 
-        select(-annotation_labeled)%>% 
+        group_by(annotation) %>%
+        mutate(annotation_labeled = paste(n_distinct(index), annotation)) %>%
+        ungroup() %>%
+        mutate(annotation = annotation_labeled) %>%
+        select(-annotation_labeled)%>%
         mutate_at(vars(group, sample, annotation, strand), funs(fct_inorder(., ordered=TRUE)))
-    
+
     #get replicate info for sample facetting
     repl_df = df %>% select(group, sample) %>% distinct() %>% group_by(group) %>%
         mutate(replicate=row_number()) %>% ungroup() %>% select(-group)
     max_reps = max(repl_df[["replicate"]])
-    
-    df = df %>% left_join(repl_df, by="sample")
-    
+
+    df %<>% left_join(repl_df, by="sample")
+
     n_anno = n_distinct(df[["annotation"]])
-    
+
     #import annotation information
     annotations = df %>% distinct(annotation) %>% pull(annotation)
     bed = tibble()
     for (i in 1:n_anno){
-        bed = read_tsv(anno_paths[i], col_names=c('chrom','start','end','name','score','strand')) %>% 
-            mutate(annotation=annotations[i]) %>% 
-            rowid_to_column(var="index") %>% 
+        bed = read_tsv(anno_paths[i], col_names=c('chrom','start','end','name','score','strand')) %>%
+            mutate(annotation=annotations[i]) %>%
+            rowid_to_column(var="index") %>%
             bind_rows(bed, .)
     }
-    
+
     n_samples = length(samplelist)
     n_groups = n_distinct(df[["group"]])
-    
+
     #clustering
     if (sortmethod=="cluster"){
         reorder = tibble()
-        
+
         #cluster for each annotation
         for (i in 1:length(annotations)){
             rr = df %>% filter(annotation==annotations[i] & paste0(sample,"-",strand) %in% cluster_samples &
                                    between(position, cluster_five/1000, cluster_three/1000))
             if (cluster_scale){
-                rr = rr %>% 
+                rr %<>%
                     group_by(group, sample, annotation, index, strand, replicate) %>%
                     mutate(cpm = scales::squish(cpm)) %>% ungroup()
             }
-            rr = rr %>% 
-                select(-c(group, annotation, replicate, strand)) %>% 
+            rr %<>%
+                select(-c(group, annotation, replicate, strand)) %>%
                 unite(cid, c(sample, position), sep="~") %>%
                 spread(cid, cpm, fill=0) %>%
                 select(-index)
-            
+
             d = dist(rr, method="euclidean")
             l = kmeans(d, k[i])[["cluster"]]
-            
+
             pdf(file=cluster_out[i], width=6, height=6)
-            unsorted = dissplot(d, method=NA, newpage=TRUE, 
+            unsorted = dissplot(d, method=NA, newpage=TRUE,
                                 main=paste0(annotations[i], "\nEuclidean distances, unsorted"),
                                 options=list(silhouettes=FALSE, col=viridis(100, direction=-1)))
-            if (k[i] > 1){
+            if (k[i] > 1) {
                 seriated = dissplot(d, labels=l, method="OLO", newpage=TRUE,
                                     main=paste0(annotations[i], "\nEuclidean distances, ",
                                                 k[i], "-means clustered,\nOLO inter- and intracluster sorting"),
                                     options=list(silhouettes=TRUE, col=viridis(100, direction=-1)))
                 dev.off()
-                
+
                 sub_reorder = tibble(annotation = annotations[i],
                                      cluster = seriated[["labels"]],
                                      og_index = seriated[["order"]]) %>%
                     mutate(new_index = row_number())
-            }
-            else if (k[i]==1){
+            } else if (k[i]==1){
                 seriated = seriate(d, method="OLO")
                 sub_reorder = tibble(annotation = annotations[i],
                                      cluster = as.integer(1),
-                                     og_index = get_order(seriated)) %>% 
+                                     og_index = get_order(seriated)) %>%
                     mutate(new_index = row_number())
             }
-            reorder = reorder %>% bind_rows(sub_reorder)
-            
-            sorted = sub_reorder %>% left_join(bed, by=c("annotation", "og_index"="index")) %>% 
+
+            reorder %<>% bind_rows(sub_reorder)
+
+            sorted = sub_reorder %>%
+                left_join(bed, by=c("annotation", "og_index"="index")) %>%
                 select(-c(annotation, og_index, new_index))
-            for (j in 1:k[i]){
-                sorted %>% filter(cluster==j) %>% 
+            for (j in 1:k[i]) {
+                sorted %>% filter(cluster==j) %>%
                     select(-cluster) %>%
                     write_tsv(anno_out[sum(k[0:(i-1)])+j], col_names=FALSE)
             }
         }
-        
-        df = df %>% left_join(reorder, by=c("annotation", "index"="og_index")) %>%
-            group_by(annotation, cluster) %>% 
-            mutate(new_index = as.integer(new_index+1-min(new_index))) %>% 
-            ungroup() %>% 
+
+        df %<>%
+            left_join(reorder, by=c("annotation", "index"="og_index")) %>%
+            group_by(annotation, cluster) %>%
+            mutate(new_index = as.integer(new_index+1-min(new_index))) %>%
+            ungroup() %>%
             arrange(annotation, cluster, new_index)
-    } 
-    else if (sortmethod=="length"){
-        sorted = bed %>% group_by(annotation) %>% 
-            arrange(end-start, .by_group=TRUE) %>% 
-            rowid_to_column(var= "new_index") %>% 
-            mutate(new_index = as.integer(new_index+1-min(new_index))) %>% 
+    } else if (sortmethod=="length"){
+        sorted = bed %>%
+            group_by(annotation) %>%
+            arrange(end-start, .by_group=TRUE) %>%
+            rowid_to_column(var= "new_index") %>%
+            mutate(new_index = as.integer(new_index+1-min(new_index))) %>%
             ungroup()
-        
+
         for (i in 1:n_anno){
-            sorted %>% filter(annotation==annotations[i]) %>% 
-                select(-c(new_index, index, annotation)) %>% 
+            sorted %>% filter(annotation==annotations[i]) %>%
+                select(-c(new_index, index, annotation)) %>%
                 write_tsv(path=anno_out[i], col_names=FALSE)
         }
-    
-        df = sorted %>% 
-            select(index, new_index, annotation) %>% 
-            right_join(df, by=c("annotation", "index")) %>% 
+
+        df = sorted %>%
+            select(index, new_index, annotation) %>%
+            right_join(df, by=c("annotation", "index")) %>%
             mutate(cluster=as.integer(1))
-    }
-    else {
-        df = df %>% mutate(new_index = index,
+    } else {
+        df %<>% mutate(new_index = index,
                            cluster = as.integer(1))
-        
-        for (i in 1:n_anno){
-            bed %>% filter(annotation==annotations[i]) %>% 
-                select(-c(index, annotation)) %>% 
+
+        for (i in 1:n_anno) {
+            bed %>% filter(annotation==annotations[i]) %>%
+                select(-c(index, annotation)) %>%
                 write_tsv(path=anno_out[i], col_names=FALSE)
         }
     }
-    
-    df_sample = df %>% filter(strand=="protection") %>% 
+
+    df_sample = df %>%
+        filter(strand=="protection") %>%
         mutate(replicate = fct_inorder(paste("replicate", replicate), ordered=TRUE),
                cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
     sample_cutoff = df_sample %>% pull(cpm) %>% quantile(probs=pct_cutoff, na.rm=TRUE)
-    
-    df_group = df %>% filter(strand=="protection") %>% 
+
+    df_group = df %>%
+        filter(strand=="protection") %>%
         group_by(group, annotation, position, cluster, new_index, strand) %>%
         summarise(cpm = mean(cpm)) %>% ungroup() %>%
         mutate(cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
     group_cutoff = df_group %>% pull(cpm) %>% quantile(probs=pct_cutoff, na.rm=TRUE)
-    
+
     heatmap_sample= hmap(df_sample, sample_cutoff)
     heatmap_group= hmap(df_group, group_cutoff)
-    if (n_anno==1 && max(k)==1){
+    if (n_anno==1 && max(k)==1) {
         heatmap_sample = heatmap_sample +
             ylab(annotations[1]) +
             facet_grid(replicate ~ group, scales="free_y", space="free_y") +
             theme(axis.title.y = element_text(size=16, face="bold", color="black", angle=90),
                   strip.text.y = element_text(size=16, face="bold", color="black"))
-        
+
         heatmap_group = heatmap_group +
             facet_grid(.~group) +
             ylab(annotations[1]) +
             theme(axis.title.y = element_text(size=16, face="bold", color="black", angle=90))
-    }
-    else if (n_anno==1 && max(k)>1){
+    } else if (n_anno==1 && max(k)>1) {
         heatmap_sample = heatmap_sample +
             ylab(annotations[1]) +
             facet_grid(replicate + cluster ~ group, scales="free_y", space="free_y") +
             theme(axis.title.y = element_text(size=16, face="bold", color="black", angle=90),
                   strip.text.y = element_text(size=12, face="bold", color="black"),
                   strip.background = element_rect(fill="white", size=0))
-        heatmap_sample = heatmap_sample %>% nest_right_facets(level=2, outer="replicate", inner="cluster")
-            
+        heatmap_sample %<>% nest_right_facets(level=2, outer="replicate", inner="cluster")
+
         heatmap_group = heatmap_group +
             ylab(annotations[1]) +
             facet_grid(cluster ~ group, scales="free_y", space="free_y") +
             theme(axis.title.y = element_text(size=16, face="bold", color="black", angle=90))
-    }
-    else if (n_anno>1 && max(k)==1){
+    } else if (n_anno>1 && max(k)==1) {
         heatmap_sample = heatmap_sample +
             facet_grid(replicate + annotation ~ group, scales="free_y", space="free_y") +
             theme(strip.text.y = element_text(size=12, face="bold", color="black"),
                   strip.background = element_rect(fill="white", size=0))
-        heatmap_sample = heatmap_sample %>% nest_right_facets(level=2, outer="replicate")
-        
+        heatmap_sample %<>% nest_right_facets(level=2, outer="replicate")
+
         heatmap_group = heatmap_group +
             facet_grid(annotation ~ group, scales="free_y", space="free_y")
-    }
-    else if (n_anno>1 && max(k)>1){
+    } else if (n_anno>1 && max(k)>1) {
         heatmap_sample = heatmap_sample +
             facet_grid(replicate + annotation + cluster ~ group,
                        scales="free_y", space="free_y") +
             theme(strip.text.y = element_text(size=12, face="bold", color="black"),
                   strip.background = element_rect(fill="white", size=0))
-        heatmap_sample = heatmap_sample %>% nest_right_facets(level=3)
-        
+        heatmap_sample %<>% nest_right_facets(level=3)
+
         heatmap_group = heatmap_group +
             facet_grid(annotation + cluster ~ group, scales="free_y", space="free_y") +
             theme(strip.text.y = element_text(size=16, face="bold", color="black"),
                   strip.background = element_rect(fill="white", size=0))
-        heatmap_group = heatmap_group %>% nest_right_facets(level=2, outer="annotation")
+        heatmap_group %<>% nest_right_facets(level=2, outer="annotation")
     }
     ggsave(heatmap_sample_out, plot=heatmap_sample, width=2+9*n_groups, height=10+10*max_reps, units="cm", limitsize=FALSE)
     ggsave(heatmap_group_out, plot=heatmap_group, width=2+9*n_groups, height=30, units="cm", limitsize=FALSE)
-    
+
     metadf_sample = df %>%
         group_by(group, sample, annotation, strand, position, cluster, replicate) %>%
-        spread(strand, cpm) %>% 
-        summarise(mean_protection = winsor.mean(protection, trim=trim_pct),
-                  mean_sense = winsor.mean(sense, trim=trim_pct),
-                  mean_antisense = winsor.mean(antisense, trim=trim_pct),
-                  sem_protection = winsor.sd(protection, trim=trim_pct)/sqrt(n()),
-                  sem_sense = winsor.sd(sense, trim=trim_pct)/sqrt(n()),
-                  sem_antisense = winsor.sd(antisense, trim=trim_pct)/sqrt(n())) %>% 
-        ungroup() %>% arrange(replicate) %>% 
+        spread(strand, cpm)
+
+    if (spread_type=="conf_int") {
+        metadf_sample %<>%
+            summarise(mid_sense = winsor.mean(sense, trim=trim_pct),
+                      mid_antisense = winsor.mean(antisense, trim=trim_pct),
+                      mid_protection = winsor.mean(protection, trim=trim_pct),
+                      sd_sense = winsor.sd(sense, trim=trim_pct),
+                      sd_antisense = winsor.sd(antisense, trim=trim_pct),
+                      sd_protection = winsor.sd(protection, trim=trim_pct)) %>%
+            mutate(low_sense = mid_sense-sd_sense,
+                   high_sense = mid_sense+sd_sense,
+                   low_antisense = mid_antisense-sd_antisense,
+                   high_antisense = mid_antisense+sd_antisense,
+                   low_protection = mid_protection-sd_protection,
+                   high_protection = mid_protection+sd_protection)
+
+        #with SD correction for small sample sizes (Gurland and Tripathi 1971)
+        metadf_group = metadf_sample %>%
+            group_by(group, annotation, position, cluster) %>%
+            summarise(sd_sense = sd(mid_sense),
+                      sd_antisense = sd(mid_antisense),
+                      sd_protection = sd(mid_protection),
+                      n = n_distinct(replicate),
+                      mid_sense = mean(mid_sense),
+                      mid_antisense = mean(mid_antisense),
+                      mid_protection = mean(mid_protection)) %>%
+            mutate(sem_sense = sqrt((n-1)/2)*gamma((n-1)/2)/gamma(n/2)*sd_sense/sqrt(n),
+                   sem_antisense = sqrt((n-1)/2)*gamma((n-1)/2)/gamma(n/2)*sd_antisense/sqrt(n),
+                   sem_protection = sqrt((n-1)/2)*gamma((n-1)/2)/gamma(n/2)*sd_protection/sqrt(n),
+                   high_sense = mid_sense + 1.96*sem_sense,
+                   low_sense = mid_sense - 1.96*sem_sense,
+                   high_antisense = mid_antisense + 1.96*sem_antisense,
+                   low_antisense = mid_antisense - 1.96*sem_antisense,
+                   high_protection = mid_protection + 1.96*sem_protection,
+                   low_protection = mid_protection - 1.96*sem_protection)
+
+
+    } else if (spread_type=="quantile") {
+        metadf_sample %<>%
+            summarise(mid_sense = median(sense),
+                      low_sense = quantile(sense, probs=trim_pct),
+                      high_sense = quantile(sense, probs=(1-trim_pct)),
+                      mid_antisense = median(antisense),
+                      low_antisense = quantile(antisense, probs=trim_pct),
+                      high_antisense = quantile(antisense, probs=(1-trim_pct)),
+                      mid_protection = median(protection),
+                      low_protection = quantile(protection, probs=trim_pct),
+                      high_protection = quantile(protection, probs=(1-trim_pct)))
+
+        metadf_group = df %>%
+            group_by(group, annotation, strand, position, cluster) %>%
+            spread(strand, cpm) %>%
+            summarise(mid_sense = median(sense),
+                      low_sense = quantile(sense, probs=trim_pct),
+                      high_sense = quantile(sense, probs=(1-trim_pct)),
+                      mid_antisense = median(antisense),
+                      low_antisense = quantile(antisense, probs=trim_pct),
+                      high_antisense = quantile(antisense, probs=(1-trim_pct)),
+                      mid_protection = median(protection),
+                      low_protection = quantile(protection, probs=trim_pct),
+                      high_protection = quantile(protection, probs=(1-trim_pct)))
+    }
+
+
+    metadf_sample %<>%
+        ungroup() %>% arrange(replicate) %>%
         mutate(replicate = fct_inorder(paste("replicate", replicate), ordered=TRUE)) %>%
         arrange(cluster) %>%
         mutate(cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
-    
-    metadf_group = df %>% group_by(group, annotation, strand, position, cluster) %>% 
-        spread(strand, cpm) %>% 
-        summarise(mean_protection = winsor.mean(protection, trim=trim_pct),
-                  mean_sense = winsor.mean(sense, trim=trim_pct),
-                  mean_antisense = winsor.mean(antisense, trim=trim_pct),
-                  sem_protection = winsor.sd(protection, trim=trim_pct)/sqrt(n()),
-                  sem_sense = winsor.sd(sense, trim=trim_pct)/sqrt(n()),
-                  sem_antisense = winsor.sd(antisense, trim=trim_pct)/sqrt(n())) %>% 
+
+    metadf_group %<>%
         ungroup() %>%
         arrange(cluster) %>%
         mutate(cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
-   
+
     meta_sample_protection = meta(metadf_sample, strand="protection")
     meta_sample_stranded = meta(metadf_sample, strand="both")
     meta_group_protection = meta(metadf_group, groupvar="group", strand="protection")
@@ -541,7 +589,8 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
     meta_sampleclust_stranded = meta(metadf_sample, groupvar="sampleclust", strand="both")
     meta_groupclust_protection = meta(metadf_group, groupvar="groupclust", strand="protection")
     meta_groupclust_stranded = meta(metadf_group, groupvar="groupclust", strand="both")
-    if (n_anno==1 && max(k)==1){
+    if (n_anno==1 && max(k)==1) {
+
         format_sample_meta = function(ggp, strand){
             ggp = ggp +
                 scale_color_manual(values=rep("#4477AA", 100)) +
@@ -551,11 +600,11 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                                 paste(factorlabel, "ChIP-nexus signal")),
                         subtitle = annotations[1]) +
                 theme(legend.position="none")
-            return(ggp)
         }
-        meta_sample_protection = format_sample_meta(meta_sample_protection, strand="protection")
-        meta_sample_stranded = format_sample_meta(meta_sample_stranded, strand="both")
-        
+
+        meta_sample_protection %<>% format_sample_meta(strand="protection")
+        meta_sample_stranded %<>% format_sample_meta(strand="both")
+
         format_sample_meta_overlay = function(df, strand){
             ggp = meta(df, strand=strand) +
                 scale_color_ptol() +
@@ -564,11 +613,10 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                         subtitle = annotations[1]) +
                 theme(legend.position="right",
                       legend.key.width=unit(0.8, "cm"))
-            return(ggp)
         }
         meta_sample_overlay_protection = format_sample_meta_overlay(metadf_sample, strand="protection")
         meta_sample_overlay_stranded = format_sample_meta_overlay(metadf_sample, strand="both")
-        
+
         format_group_meta = function(ggp, strand){
             ggp = ggp +
                 scale_color_ptol() +
@@ -577,11 +625,10 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                         subtitle = annotations[1]) +
                 theme(legend.position="right",
                       legend.key.width=unit(0.8, "cm"))
-            return(ggp)
         }
-        meta_group_protection = format_group_meta(meta_group_protection, strand="protection")
-        meta_group_stranded = format_group_meta(meta_group_stranded, strand="both")
-        
+        meta_group_protection %<>% format_group_meta(strand="protection")
+        meta_group_stranded %<>% format_group_meta(strand="both")
+
         format_sampleclust_meta = function(ggp, strand){
             ggp = ggp +
                 facet_grid(. ~ group) +
@@ -590,11 +637,10 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                         subtitle = annotations[1]) +
                 theme(legend.position="right",
                       legend.key.width=unit(1, "cm"))
-            return(ggp)
         }
-        meta_sampleclust_protection = format_sampleclust_meta(meta_sampleclust_protection, strand="protection")
-        meta_sampleclust_stranded = format_sampleclust_meta(meta_sampleclust_stranded, strand="both")
-        
+        meta_sampleclust_protection %<>% format_sampleclust_meta(strand="protection")
+        meta_sampleclust_stranded %<>% format_sampleclust_meta(strand="both")
+
         format_groupclust_meta = function(ggp, strand){
             ggp = ggp +
                 facet_grid(. ~ group) +
@@ -603,11 +649,10 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                         subtitle = annotations[1]) +
                 theme(legend.position="right",
                       legend.key.width=unit(1, "cm"))
-            return(ggp)
         }
-        meta_groupclust_protection = format_groupclust_meta(meta_groupclust_protection, strand="protection")
-        meta_groupclust_stranded = format_groupclust_meta(meta_groupclust_stranded, strand="both")
-        
+        meta_groupclust_protection %<>% format_groupclust_meta(strand="protection")
+        meta_groupclust_stranded %<>% format_groupclust_meta(strand="both")
+
         ggsave(meta_sample_protection_out, plot = meta_sample_protection, width=3+7*n_groups, height=2+5*max_reps, units="cm", limitsize=FALSE)
         ggsave(meta_sample_stranded_out, plot = meta_sample_stranded, width=3+7*n_groups, height=2+5*max_reps, units="cm", limitsize=FALSE)
         ggsave(meta_sample_overlay_protection_out, plot = meta_sample_overlay_protection, width=16, height=9, units="cm", limitsize=FALSE)
@@ -618,51 +663,56 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         ggsave(meta_sampleclust_stranded_out, plot = meta_sampleclust_stranded, width=6+7*n_groups, height=10, units="cm", limitsize=FALSE)
         ggsave(meta_groupclust_protection_out, plot = meta_groupclust_protection, width=6+7*n_groups, height=10, units="cm", limitsize=FALSE)
         ggsave(meta_groupclust_stranded_out, plot = meta_groupclust_stranded, width=6+7*n_groups, height=10, units="cm", limitsize=FALSE)
-    }
-    else if (n_anno>1 && max(k)==1){
+    } else if (n_anno>1 && max(k)==1) {
         meta_sample_protection = meta_sample_protection + facet_grid(replicate ~ annotation)
         meta_sample_stranded = meta_sample_stranded + facet_grid(replicate ~ annotation)
-        
+
         meta_sample_protection_overlay = meta_sample_protection + facet_grid(.~annotation)
         meta_sample_stranded_overlay = meta_sample_stranded + facet_grid(.~annotation)
-        
+
         meta_group_protection = meta_group_protection + facet_grid(.~annotation)
         meta_group_stranded = meta_group_stranded + facet_grid(.~annotation)
-        
+
         meta_sampleclust_protection = meta_sampleclust_protection + facet_grid(annotation ~ group)
         meta_sampleclust_stranded = meta_sampleclust_stranded + facet_grid(annotation ~ group)
-        
+
         meta_groupclust_protection = meta_groupclust_protection + facet_grid(annotation ~ group)
         meta_groupclust_stranded = meta_groupclust_stranded + facet_grid(annotation ~ group)
-    }
-    else if (max(k)>1){
+    } else if (max(k)>1) {
         format_sample_meta = function(ggp){
             ggp = ggp +
                 facet_grid(replicate ~ annotation + cluster) +
                 theme(strip.background = element_rect(fill="white", size=0))
-            ggp = ggp %>% nest_top_facets(level=2)
+            ggp %>%
+                nest_top_facets(level=2) %>%
+                return()
         }
-        meta_sample_protection = format_sample_meta(meta_sample_protection)
-        meta_sample_stranded = format_sample_meta(meta_sample_stranded)
-        
+
+        meta_sample_protection %<>% format_sample_meta()
+        meta_sample_stranded %<>% format_sample_meta()
+
         meta_sample_overlay_protection = meta(metadf_sample, strand="protection") + facet_grid(cluster ~ annotation)
         meta_sample_overlay_stranded = meta(metadf_sample, strand="both") + facet_grid(cluster ~ annotation)
-        
+
         meta_group_protection = meta_group_protection + facet_grid(cluster ~ annotation)
         meta_group_stranded = meta_group_stranded + facet_grid(cluster ~ annotation)
-        
-        meta_sampleclust_protection = meta_sampleclust_protection + facet_grid(annotation ~ group) +
+
+        meta_sampleclust_protection = meta_sampleclust_protection +
+            facet_grid(annotation ~ group) +
             theme(legend.key.width=unit(2, "cm"))
-        meta_sampleclust_stranded = meta_sampleclust_stranded + facet_grid(annotation ~ group) +
+        meta_sampleclust_stranded = meta_sampleclust_stranded +
+            facet_grid(annotation ~ group) +
             theme(legend.key.width=unit(2, "cm"))
-        
-        meta_groupclust_protection = meta_groupclust_protection + facet_grid(annotation ~ group) +
+
+        meta_groupclust_protection = meta_groupclust_protection +
+            facet_grid(annotation ~ group) +
             theme(legend.key.width=unit(2, "cm"))
-        meta_groupclust_stranded = meta_groupclust_stranded + facet_grid(annotation ~ group) +
+        meta_groupclust_stranded = meta_groupclust_stranded +
+            facet_grid(annotation ~ group) +
             theme(legend.key.width=unit(2, "cm"))
     }
-    
-    if (!(n_anno==1 && max(k)==1)){
+
+    if (!(n_anno==1 && max(k)==1)) {
         ggsave(meta_sample_protection_out, plot = meta_sample_protection, width=3+6*sum(k), height=2+5*max_reps, units="cm", limitsize=FALSE)
         ggsave(meta_sample_stranded_out, plot = meta_sample_stranded, width=3+6*sum(k), height=2+5*max_reps, units="cm", limitsize=FALSE)
         ggsave(meta_sample_overlay_protection_out, plot = meta_sample_overlay_protection, width=3+7*n_anno, height=2+5*max(k), units="cm", limitsize=FALSE)
@@ -679,21 +729,22 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
 main(in_paths = snakemake@input[["matrices"]],
      samplelist = snakemake@params[["samplelist"]],
      anno_paths = snakemake@input[["annotations"]],
-     ptype = snakemake@params[["plottype"]], 
+     ptype = snakemake@params[["plottype"]],
      upstream = snakemake@params[["upstream"]],
      dnstream = snakemake@params[["dnstream"]],
-     scaled_length = snakemake@params[["scaled_length"]], 
+     scaled_length = snakemake@params[["scaled_length"]],
      pct_cutoff = snakemake@params[["pct_cutoff"]],
      log_transform = snakemake@params[["log_transform"]],
      pcount = snakemake@params[["pcount"]],
+     spread_type = snakemake@params[["spread_type"]],
      trim_pct = snakemake@params[["trim_pct"]],
      factorlabel = snakemake@wildcards[["factor"]],
      refptlabel = snakemake@params[["refpointlabel"]],
      endlabel = snakemake@params[["endlabel"]],
      cmap = snakemake@params[["cmap"]],
      sortmethod = snakemake@params[["sortmethod"]],
-     cluster_scale = snakemake@params[["cluster_scale"]], 
-     cluster_samples = snakemake@params[["cluster_samples"]], 
+     cluster_scale = snakemake@params[["cluster_scale"]],
+     cluster_samples = snakemake@params[["cluster_samples"]],
      cluster_five = snakemake@params[["cluster_five"]],
      cluster_three = snakemake@params[["cluster_three"]],
      k = snakemake@params[["k"]],
@@ -711,3 +762,4 @@ main(in_paths = snakemake@input[["matrices"]],
      meta_groupclust_stranded_out = snakemake@output[["metagene_groupclust_stranded"]],
      anno_out = snakemake@params[["annotations_out"]],
      cluster_out = snakemake@params[["clusters_out"]])
+

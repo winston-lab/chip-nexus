@@ -46,7 +46,7 @@ rule cat_matrices:
         lambda wc: expand("datavis/{figure}/{norm}/{annotation}_{sample}-{norm}-{strand}-melted.tsv.gz", annotation=list(FIGURES[wc.figure]["annotations"].keys()), sample=SAMPLES, figure=wc.figure, norm=wc.norm, strand=wc.strand)
     output:
         "datavis/{figure}/{norm}/{figure}-allsamples-allannotations-{factor}-chipnexus-{norm}-{strand}.tsv.gz"
-    log: "logs/cat_matrices/cat_matrices-{figure}_{norm}-{strand}.log"
+    log: "logs/cat_matrices/cat_matrices-{figure}_{norm}-{strand}-{factor}.log"
     shell: """
         (cat {input} > {output}) &> {log}
         """
@@ -80,13 +80,14 @@ rule plot_figures:
         pct_cutoff = lambda wc: FIGURES[wc.figure]["parameters"]["pct_cutoff"],
         log_transform = lambda wc: str(FIGURES[wc.figure]["parameters"]["log_transform"]).upper(),
         pcount = lambda wc: 0 if not FIGURES[wc.figure]["parameters"]["log_transform"] else FIGURES[wc.figure]["parameters"]["pseudocount"],
+        spread_type = lambda wc: FIGURES[wc.figure]["parameters"]["spread_type"],
         trim_pct = lambda wc: FIGURES[wc.figure]["parameters"]["trim_pct"],
         refpointlabel = lambda wc: FIGURES[wc.figure]["parameters"]["refpointlabel"],
         endlabel = lambda wc:  "HAIL SATAN" if FIGURES[wc.figure]["parameters"]["type"]=="absolute" else FIGURES[wc.figure]["parameters"]["three_prime_label"],
         cmap = lambda wc: FIGURES[wc.figure]["parameters"]["heatmap_colormap"],
         sortmethod = lambda wc: FIGURES[wc.figure]["parameters"]["arrange"],
         cluster_scale = lambda wc: "FALSE" if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else str(FIGURES[wc.figure]["parameters"]["cluster_scale"]).upper(),
-        cluster_samples = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else cluster_samples(wc.status, wc.norm, FIGURES[wc.figure]["parameters"]["cluster_conditions"], FIGURES[wc.figure]["parameters"]["cluster_strands"]),
+        cluster_samples = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else cluster_samples(wc.status, wc.norm, list(FIGURES[wc.figure]["parameters"]["cluster_conditions"].keys()), list(FIGURES[wc.figure]["parameters"]["cluster_conditions"].values())),
         cluster_five = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else FIGURES[wc.figure]["parameters"]["cluster_five"],
         cluster_three = lambda wc: [] if FIGURES[wc.figure]["parameters"]["arrange"] != "cluster" else FIGURES[wc.figure]["parameters"]["cluster_three"],
         k = lambda wc: [v["n_clusters"] for k,v in FIGURES[wc.figure]["annotations"].items()],

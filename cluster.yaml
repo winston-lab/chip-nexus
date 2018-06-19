@@ -104,7 +104,6 @@ plot_scatter_plots:
     time : 60
     mem : 12000
 
-
 compute_matrix:
     time : 20
     n : 1

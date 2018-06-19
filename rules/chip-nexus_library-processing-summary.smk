@@ -9,9 +9,9 @@ rule aggregate_read_numbers:
     input:
         adapter = expand("logs/remove_adapter/remove_adapter-{sample}.log", sample=SAMPLES),
         align = expand("logs/align/align_{sample}.log", sample=SAMPLES),
-        nodups = expand("alignment/{sample}_{{factor}}-chipnexus-noPCRduplicates.bam", sample=SAMPLES)
+        nodups = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam", sample=SAMPLES)
     output:
-        "qual_ctrl/read_processing/{factor}-chipnexus_read-processing-summary.tsv"
+        f"qual_ctrl/read_processing/{FACTOR}-chipnexus_read-processing-summary.tsv"
     log: "logs/aggregate_read_numbers.log"
     run:
         shell("""(echo -e "sample\traw\tcleaned\tmapped\tunique_map\tnoPCRdup" > {output}) &> {log}""")
@@ -32,11 +32,11 @@ rule plot_read_processing:
 
 rule build_spikein_counts_table:
     input:
-        total_bam = expand("alignment/{sample}_{{factor}}-chipnexus-noPCRduplicates.bam", sample=sisamples),
-        exp_bam = expand("alignment/{sample}_{{factor}}-chipnexus-noPCRduplicates-experimental.bam", sample=sisamples),
-        si_bam = expand("alignment/{sample}_{{factor}}-chipnexus-noPCRduplicates-spikein.bam", sample=sisamples),
+        total_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam", sample=sisamples),
+        exp_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-experimental.bam", sample=sisamples),
+        si_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-spikein.bam", sample=sisamples),
     output:
-        "qual_ctrl/spikein/{factor}_chipnexus-spikein-counts.tsv"
+        f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-counts.tsv"
     params:
         groups = [v["group"] for k,v in sisamples.items()]
     log: "logs/build_spikein_counts_table.log"
@@ -47,10 +47,10 @@ rule build_spikein_counts_table:
 
 rule plot_spikein_pct:
     input:
-        "qual_ctrl/spikein/{factor}_chipnexus-spikein-counts.tsv"
+        f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-counts.tsv"
     output:
-        plot = "qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg",
-        stats = "qual_ctrl/spikein/{factor}-chipnexus_spikein-stats-{status}.tsv"
+        plot = f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-plots-{{status}}.svg",
+        stats = f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-stats-{{status}}.tsv"
     params:
         samplelist = lambda wc : list(sisamples.keys()) if wc.status=="all" else list(sipassing.keys()),
         conditions = conditiongroups_si,
