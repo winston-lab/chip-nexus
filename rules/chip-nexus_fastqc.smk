@@ -6,16 +6,16 @@ rule fastqc_pre_and_unaligned:
     input:
         lambda wc: {
                 "raw": SAMPLES[wc.sample]["fastq"],
-                "cleaned": "fastq/cleaned/"+ wc.sample +"_"+ FACTOR +"-chipnexus-clean.fastq.gz",
-                "unaligned": "fastq/"+ wc.sample +"_"+ FACTOR +"-chipnexus-unaligned.fastq.gz"
+                "cleaned": f"fastq/cleaned/{wc.sample}_{FACTOR}-chipnexus-clean.fastq.gz",
+                "unaligned": f"fastq/{wc.sample}_{FACTOR}-chipnexus-unaligned.fastq.gz"
                     }.get(wc.read_status, "KEYERROR")
     output:
         "qual_ctrl/fastqc/{read_status}/{sample}_fastqc-data-{read_status}.txt"
     params:
         fname = lambda wc: {
                     "raw": re.split('.fq|.fastq', os.path.split(SAMPLES[wc.sample]["fastq"])[1])[0],
-                    "cleaned": wc.sample +"_"+ FACTOR + "-chipnexus-clean",
-                    "unaligned": wc.sample +"_"+ FACTOR + "-chipnexus-unaligned"
+                    "cleaned": f"{wc.sample}_{FACTOR}-chipnexus-clean",
+                    "unaligned": f"{wc.sample}_{FACTOR}-chipnexus-unaligned"
                     }.get(wc.read_status, "KEYERROR"),
         adapter = config["cutadapt"]["adapter"]
     wildcard_constraints:
@@ -30,9 +30,9 @@ rule fastqc_pre_and_unaligned:
 
 rule fastqc_aligned:
     input:
-        "alignment/{sample}_" + FACTOR + "-chipnexus-noPCRduplicates.bam"
+        f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam"
     params:
-        fname = "{sample}_" + FACTOR + "-chipnexus-noPCRduplicates",
+        fname = f"{{sample}}_{FACTOR}-chipnexus-noPCRduplicates",
         adapter = config["cutadapt"]["adapter"]
     output:
         "qual_ctrl/fastqc/aligned_noPCRdup/{sample}_fastqc-data-aligned_noPCRdup.txt"
@@ -85,7 +85,6 @@ fastqc_dict = {
             }
         }
 
-
 rule fastqc_aggregate:
     input:
         raw = expand("qual_ctrl/fastqc/raw/{sample}_fastqc-data-raw.txt", sample=SAMPLES),
@@ -93,45 +92,44 @@ rule fastqc_aggregate:
         aligned_noPCRdup = expand("qual_ctrl/fastqc/aligned_noPCRdup/{sample}_fastqc-data-aligned_noPCRdup.txt", sample=SAMPLES),
         unaligned = expand("qual_ctrl/fastqc/unaligned/{sample}_fastqc-data-unaligned.txt", sample=SAMPLES),
     output:
-        per_base_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_quality.tsv',
-        per_tile_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_tile_quality.tsv',
-        per_seq_qual =  'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_quality.tsv',
-        per_base_seq_content = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_sequence_content.tsv',
-        per_seq_gc = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_gc.tsv',
-        per_base_n = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_n.tsv',
-        seq_length_dist = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_length_distribution.tsv',
-        seq_duplication = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_duplication_levels.tsv',
-        adapter_content = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-adapter_content.tsv',
+        per_base_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_quality.tsv',
+        per_tile_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_tile_quality.tsv',
+        per_seq_qual =  f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_quality.tsv',
+        per_base_seq_content = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_sequence_content.tsv',
+        per_seq_gc = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_gc.tsv',
+        per_base_n = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_n.tsv',
+        seq_length_dist = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_length_distribution.tsv',
+        seq_duplication = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_duplication_levels.tsv',
+        adapter_content = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-adapter_content.tsv',
     run:
         shell("""rm -f {output}""")
-        for fastqc_metric in output.keys():
+        for fastqc_metric, out_path in output.items():
             title = fastqc_dict[fastqc_metric]["title"]
             fields = fastqc_dict[fastqc_metric]["fields"]
-            out_path = output[fastqc_metric]
-            for read_status in input.keys():
-                for sample_id, fastqc_data in zip(SAMPLES.keys(), input[read_status]):
+            for read_status, read_status_data in input.items():
+                for sample_id, fastqc_data in zip(SAMPLES.keys(), read_status_data):
                     shell("""awk 'BEGIN{{FS=OFS="\t"}} /{title}/{{flag=1;next}}/>>END_MODULE/{{flag=0}} flag {{print $0, "{sample_id}", "{read_status}"}}' {fastqc_data} | tail -n +2 >> {out_path}""")
             shell("""sed -i "1i {fields}" {out_path}""")
 
 rule plot_fastqc_summary:
     input:
-        seq_len_dist = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_length_distribution.tsv',
-        per_tile = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_tile_quality.tsv',
-        per_base_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_quality.tsv',
-        per_base_seq = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_sequence_content.tsv',
-        per_base_n = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_n.tsv',
-        per_seq_gc = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_gc.tsv',
-        per_seq_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_quality.tsv',
-        adapter_content = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-adapter_content.tsv',
-        seq_dup = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_duplication_levels.tsv',
+        seq_len_dist = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_length_distribution.tsv',
+        per_tile = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_tile_quality.tsv',
+        per_base_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_quality.tsv',
+        per_base_seq = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_sequence_content.tsv',
+        per_base_n = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_n.tsv',
+        per_seq_gc = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_gc.tsv',
+        per_seq_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_quality.tsv',
+        adapter_content = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-adapter_content.tsv',
+        seq_dup = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_duplication_levels.tsv',
     output:
-        seq_len_dist = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_length_distribution.svg',
-        per_tile = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_tile_quality.svg',
-        per_base_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_quality.svg',
-        per_base_seq = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_base_sequence_content.svg',
-        per_seq_gc = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_gc.svg',
-        per_seq_qual = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-per_sequence_quality.svg',
-        adapter_content = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-adapter_content.svg',
-        seq_dup = 'qual_ctrl/fastqc/'+ FACTOR +'-chipnexus-sequence_duplication_levels.svg',
+        seq_len_dist = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_length_distribution.svg',
+        per_tile = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_tile_quality.svg',
+        per_base_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_quality.svg',
+        per_base_seq = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_sequence_content.svg',
+        per_seq_gc = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_gc.svg',
+        per_seq_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_quality.svg',
+        adapter_content = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-adapter_content.svg',
+        seq_dup = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_duplication_levels.svg',
     script: "../scripts/fastqc_summary.R"
 
