@@ -32,17 +32,17 @@ rule plot_read_processing:
 
 rule build_spikein_counts_table:
     input:
-        total_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam", sample=sisamples),
-        exp_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-experimental.bam", sample=sisamples),
-        si_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-spikein.bam", sample=sisamples),
+        total_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam", sample=SISAMPLES),
+        exp_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-experimental.bam", sample=SISAMPLES),
+        si_bam = expand(f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-spikein.bam", sample=SISAMPLES),
     output:
         f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-counts.tsv"
     params:
-        groups = [v["group"] for k,v in sisamples.items()]
+        groups = [v["group"] for k,v in SISAMPLES.items()]
     log: "logs/build_spikein_counts_table.log"
     run:
         shell("""(echo -e "sample\tgroup\ttotal_counts\texperimental_counts\tspikein_counts" > {output}) &> {log} """)
-        for sample, group, total, exp, si in zip(sisamples.keys(), params.groups, input.total_bam, input.exp_bam, input.si_bam):
+        for sample, group, total, exp, si in zip(SISAMPLES.keys(), params.groups, input.total_bam, input.exp_bam, input.si_bam):
             shell("""(paste <(echo -e "{sample}\t{group}") <(samtools view -c {total}) <(samtools view -c {exp}) <(samtools view -c {si}) >> {output}) &>> {log} """)
 
 rule plot_spikein_pct:
@@ -52,7 +52,7 @@ rule plot_spikein_pct:
         plot = f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-plots-{{status}}.svg",
         stats = f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-stats-{{status}}.tsv"
     params:
-        samplelist = lambda wc : list(sisamples.keys()) if wc.status=="all" else list(sipassing.keys()),
+        samplelist = lambda wc : list(SISAMPLES.keys()) if wc.status=="all" else list(SIPASSING.keys()),
         conditions = conditiongroups_si,
         controls = controlgroups_si
     script: "../scripts/plot_si_pct.R"

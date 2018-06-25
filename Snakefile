@@ -10,9 +10,9 @@ subworkflow build_annotations:
 FACTOR = config["factor"]
 
 SAMPLES = config["samples"]
-sisamples = {k:v for k,v in SAMPLES.items() if v["spikein"]=="y"}
-PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"] == "pass"}
-sipassing = {k:v for k,v in PASSING.items() if v["spikein"]=="y"}
+SISAMPLES = {k:v for k,v in SAMPLES.items() if v["spikein"]}
+PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"]}
+SIPASSING = {k:v for k,v in PASSING.items() if v["spikein"]}
 GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
 
 controlgroups = [v for k,v in config["comparisons"]["libsizenorm"].items()]
@@ -68,16 +68,22 @@ rule all:
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         #expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
+status_norm_sample_dict = {
+    "all":
+        {   "libsizenorm" : SAMPLES,
+            "spikenorm" : SISAMPLES
+        },
+    "passing":
+        {   "libsizenorm" : PASSING,
+            "spikenorm" : SIPASSING
+        }
+    }
+
 def get_condition_control_samples(wc):
-    if wc.condition=="all":
-        if wc.norm=="libsizenorm": #condition==all,norm==lib
-            return list(SAMPLES.keys())
-        else: #condition==all,norm==spike
-            return list(sisamples.keys())
-    elif wc.norm=="libsizenorm": #condition!=all;norm==lib
-        return [k for k,v in PASSING.items() if v["group"] in [wc.control, wc.condition]]
-    else: #condition!=all;norm==spike
-        return [k for k,v in sipassing.items() if v["group"] in [wc.control, wc.condition]]
+    if wc.condition=="all" and wc.control=="all":
+        return(list(status_norm_sample_dict[wc.status][wc.norm].keys()))
+    else:
+        return([k for k,v in status_norm_sample_dict[wc.status][wc.norm].items() if v["group"] in (wc.condition, wc.control)])
 
 def getsamples(ctrl, cond):
     return [k for k,v in PASSING.items() if v["group"] in [ctrl, cond]]
