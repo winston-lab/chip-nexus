@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import os
 from math import log2, log10
 import itertools
@@ -24,13 +25,53 @@ CATEGORIES = ["genic", "intragenic", "intergenic"]
 
 FIGURES = config["figures"]
 
+status_norm_sample_dict = {
+    "all":
+        {   "libsizenorm" : SAMPLES,
+            "spikenorm" : SISAMPLES
+        },
+    "passing":
+        {   "libsizenorm" : PASSING,
+            "spikenorm" : SIPASSING
+        }
+    }
+
+def get_samples(status, norm, groups):
+    if "all" in groups:
+        return(list(status_norm_sample_dict[status][norm].keys()))
+    else:
+        return([k for k,v in status_norm_sample_dict[status][norm].items() if v["group"] in groups])
+
+def cluster_samples(status, norm, cluster_groups, cluster_strands):
+    ll = []
+    for group, strand in zip(cluster_groups, cluster_strands):
+        sublist = [k for k,v in status_norm_sample_dict[status][norm].items() if v["group"] in cluster_groups]
+        if strand=="protection":
+            ll.append([f"{sample}-protection" for sample in sublist])
+        if strand in ["sense", "both"]:
+            ll.append([f"{sample}-sense" for sample in sublist])
+        if strand in ["antisense", "both"]:
+            ll.append([f"{sample}-antisense" for sample in sublist])
+    return(list(itertools.chain(*ll)))
+
+include: "rules/chip-nexus_clean_reads.smk"
+include: "rules/chip-nexus_alignment.smk"
+include: "rules/chip-nexus_fastqc.smk"
+include: "rules/chip-nexus_library-processing-summary.smk"
+include: "rules/chip-nexus_sample_similarity.smk"
+include: "rules/chip-nexus_peakcalling.smk"
+include: "rules/chip-nexus_classify_peaks.smk"
+include: "rules/chip-nexus_differential_binding.smk"
+include: "rules/chip-nexus_genome_coverage.smk"
+include: "rules/chip-nexus_datavis.smk"
+
+onsuccess:
+    shell("(./mogrify.sh) > mogrify.log")
+
 localrules:
     all,
     make_stranded_annotations,
     make_ratio_annotation, cat_ratio_counts
-
-onsuccess:
-    shell("(./mogrify.sh) > mogrify.log")
 
 rule all:
     input:
@@ -67,39 +108,6 @@ rule all:
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         #expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
-
-status_norm_sample_dict = {
-    "all":
-        {   "libsizenorm" : SAMPLES,
-            "spikenorm" : SISAMPLES
-        },
-    "passing":
-        {   "libsizenorm" : PASSING,
-            "spikenorm" : SIPASSING
-        }
-    }
-
-def get_condition_control_samples(wc):
-    if wc.condition=="all" and wc.control=="all":
-        return(list(status_norm_sample_dict[wc.status][wc.norm].keys()))
-    else:
-        return([k for k,v in status_norm_sample_dict[wc.status][wc.norm].items() if v["group"] in (wc.condition, wc.control)])
-
-def getsamples(ctrl, cond):
-    return [k for k,v in PASSING.items() if v["group"] in [ctrl, cond]]
-
-def cluster_samples(status, norm, cluster_groups, cluster_strands):
-    ll = []
-    dd = SAMPLES if status=="all" else PASSING
-    for group, strand in zip(cluster_groups, cluster_strands):
-        sublist = [k for k,v in dd.items() if v["group"]==group] if norm=="libsizenorm" else [k for k,v in dd.items() if v["group"]==group and v["spikein"]=="y"]
-        if strand=="protection":
-            ll.append([sample + "-" + "protection" for sample in sublist])
-        if strand in ["sense", "both"]:
-            ll.append([sample + "-" + "sense" for sample in sublist])
-        if strand in ["antisense", "both"]:
-            ll.append([sample + "-" + "antisense" for sample in sublist])
-    return(list(itertools.chain(*ll)))
 
 rule make_stranded_genome:
     input:
@@ -181,15 +189,4 @@ rule plot_ratios:
         annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
     script:
         "scripts/ratio.R"
-
-include: "rules/chip-nexus_clean_reads.smk"
-include: "rules/chip-nexus_alignment.smk"
-include: "rules/chip-nexus_fastqc.smk"
-include: "rules/chip-nexus_library-processing-summary.smk"
-include: "rules/chip-nexus_sample_similarity.smk"
-include: "rules/chip-nexus_peakcalling.smk"
-include: "rules/chip-nexus_classify_peaks.smk"
-include: "rules/chip-nexus_differential_binding.smk"
-include: "rules/chip-nexus_genome_coverage.smk"
-include: "rules/chip-nexus_datavis.smk"
 
