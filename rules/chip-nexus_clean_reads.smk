@@ -23,6 +23,6 @@ rule extract_molecular_barcode:
         ligation = "qual_ctrl/molec_barcode/ligation-{sample}.tsv"
     log: "logs/extract_molecular_barcode/extract_molecular_barcode-{sample}.log"
     shell: """
-        (python scripts/extractNexusMolecularBarcode.py {input} {output.fastq} {output.barcodes} {output.ligation}) &> {log}
+        (python scripts/extract_nexus_molecular_barcode.py {input} {output.fastq} {output.barcodes} {output.ligation}) &> {log}
         """
 
