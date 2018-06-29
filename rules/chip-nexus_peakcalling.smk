@@ -5,7 +5,7 @@ localrules: combine_peaks
 rule callpeaks_macs2:
     input:
         bam = lambda wc: expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates-{species}.bam", sample=[k for k,v in PASSING.items() if v["group"]==wc.group], factor=FACTOR, species=wc.species),
-        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.species==config["combinedgenome"]["experimental_prefix"] else config["genome"]["si-chrsizes"],
+        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.species=="experimental" else config["genome"]["sichrsizes"],
     output:
         tsv = "peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.xls",
         peaks = "peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.narrowPeak",

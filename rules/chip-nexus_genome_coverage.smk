@@ -6,14 +6,13 @@ rule crosslink_coverage:
     output:
         "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-{strand}.bedgraph",
     params:
-        prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.counttype=="counts" else config["combinedgenome"]["spikein_prefix"],
-        strand_symbol = lambda wc: "+" if wc.strand=="plus" else "-"
+        strand_symbol = lambda wc: {"plus": "+", "minus": "-"}.get(wc.strand)
     wildcard_constraints:
         counttype="counts|sicounts",
         strand="plus|minus"
     log: "logs/crosslink_coverage/crosslink_coverage-{sample}-{counttype}-{strand}-{factor}.log"
     shell: """
-        (bedtools genomecov -bga -5 -strand {params.strand_symbol} -ibam {input} | sort -k1,1 -k2,2n > {output}) &> {log}
+        (bedtools genomecov -bga -5 -strand {params.strand_symbol} -ibam {input} > {output}) &> {log}
         """
 
 #extend reads to the median fragment size over all samples as
@@ -37,7 +36,7 @@ rule protection_coverage:
 rule midpoint_coverage:
     input:
         tsv = lambda wc: expand("peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.xls", factor=FACTOR, group=GROUPS, species= ("experimental" if wc.counttype=="counts" else "spikein")),
-        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.counttype=="counts" else config["genome"]["si-chrsizes"],
+        chrsizes = lambda wc: config["genome"]["chrsizes"] if wc.counttype=="counts" else config["genome"]["sichrsizes"],
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph"
     output:

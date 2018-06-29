@@ -13,7 +13,7 @@ rule map_to_windows:
 
 rule join_window_counts:
     input:
-        expand("qual_ctrl/scatter_plots/{factor}-chipnexus_{sample}-{{norm}}-window-{{windowsize}}.bedgraph", sample=(SAMPLES if wc.norm=="libsizenorm" else SISAMPLES), factor=FACTOR)
+        lambda wc: expand("qual_ctrl/scatter_plots/{factor}-chipnexus_{sample}-{{norm}}-window-{{windowsize}}.bedgraph", sample=(SAMPLES if wc.norm=="libsizenorm" else SISAMPLES), factor=FACTOR)
     output:
         "qual_ctrl/scatter_plots/{factor}-chipnexus_union-bedgraph-{norm}-window-{windowsize}-allsamples.tsv.gz"
     params:
