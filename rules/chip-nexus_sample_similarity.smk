@@ -13,11 +13,11 @@ rule map_to_windows:
 
 rule join_window_counts:
     input:
-        expand("qual_ctrl/scatter_plots/{factor}-chipnexus_{sample}-{{norm}}-window-{{windowsize}}.bedgraph", sample=SAMPLES, factor=FACTOR)
+        expand("qual_ctrl/scatter_plots/{factor}-chipnexus_{sample}-{{norm}}-window-{{windowsize}}.bedgraph", sample=(SAMPLES if wc.norm=="libsizenorm" else SISAMPLES), factor=FACTOR)
     output:
         "qual_ctrl/scatter_plots/{factor}-chipnexus_union-bedgraph-{norm}-window-{windowsize}-allsamples.tsv.gz"
     params:
-        names = list(SAMPLES.keys())
+        names = lambda wc: list(SAMPLES.keys()) if wc.norm=="libsizenorm" else list(SISAMPLES.keys())
     log: "logs/join_window_counts/join_window_counts-{norm}-{windowsize}-{factor}.log"
     shell: """
         (bedtools unionbedg -i {input} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz -f > {output}) &> {log}
