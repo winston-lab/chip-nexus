@@ -27,6 +27,7 @@ rule plot_read_processing:
         surv_abs_out = "qual_ctrl/read_processing/{factor}-chipnexus_read-processing-survival-absolute.svg",
         surv_rel_out = "qual_ctrl/read_processing/{factor}-chipnexus_read-processing-survival-relative.svg",
         loss_out  = "qual_ctrl/read_processing/{factor}-chipnexus_read-processing-loss.svg",
+    conda: "../envs/tidyverse.yaml"
     script: "../scripts/processing_summary.R"
 
 rule build_spikein_counts_table:
@@ -54,5 +55,6 @@ rule plot_spikein_pct:
         samplelist = lambda wc : list(SISAMPLES.keys()) if wc.status=="all" else list(SIPASSING.keys()),
         conditions = conditiongroups_si,
         controls = controlgroups_si
+    conda: "../envs/tidyverse.yaml"
     script: "../scripts/plot_si_pct.R"
 

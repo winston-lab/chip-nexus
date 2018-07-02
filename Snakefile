@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os
-from math import log2, log10
+from math import log2
 import itertools
 
 configfile: "config.yaml"

@@ -131,5 +131,6 @@ rule plot_fastqc_summary:
         per_seq_qual = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_sequence_quality.svg',
         adapter_content = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-adapter_content.svg',
         seq_dup = f'qual_ctrl/fastqc/{FACTOR}-chipnexus-sequence_duplication_levels.svg',
+    conda: "../envs/tidyverse.yaml"
     script: "../scripts/fastqc_summary.R"
 

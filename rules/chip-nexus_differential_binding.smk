@@ -44,6 +44,7 @@ rule differential_binding:
         groups = lambda wc: [PASSING[x]["group"] for x in get_samples("passing", wc.norm, [wc.control, wc.condition])],
         alpha = config["deseq"]["fdr"],
         lfc = log2(config["deseq"]["fold-change-threshold"]),
+    conda: "../envs/diff_bind.yaml"
     script:
         "../scripts/call_diffbind_peaks.R"
 
@@ -59,6 +60,7 @@ rule diffbind_results_to_narrowpeak:
     output:
         narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
         summit_bed = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}-summits.bed",
+    conda: "../envs/diffbind_to_narrowpeak.yaml"
     log: "logs/diffbind_results_to_narrowpeak/diffbind_results_to_narrowpeak-{condition}-v-{control}_{norm}-{direction}-{factor}.log"
     shell: """
         median_fragsize=$(grep -e "^# d = " {input.tsv} | cut -d ' ' -f4 | sort -k1,1n | awk '{{count[NR]=$1;}} END{{if (NR % 2) {{print count[(NR+1)/2]}} else {{print (count[(NR/2)] + count[(NR/2)+1]) / 2.0;}} }}' | xargs printf "%.*f\n" 0)
@@ -71,13 +73,14 @@ rule summarise_db_results:
         genic = "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-genic.tsv",
         intragenic = "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intragenic.tsv",
         intergenic = "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intergenic.tsv",
-    params:
-        lfc = config["deseq"]["fold-change-threshold"],
-        alpha = config["deseq"]["fdr"]
     output:
         summary = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-summary.svg",
         maplot = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-maplot.svg",
         volcano = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-volcano.svg",
         volcano_free = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-volcano-freescale.svg",
+    params:
+        lfc = config["deseq"]["fold-change-threshold"],
+        alpha = config["deseq"]["fdr"]
+    conda: "../envs/tidyverse.yaml"
     script: "../scripts/plot_diffbind_summary.R"
 

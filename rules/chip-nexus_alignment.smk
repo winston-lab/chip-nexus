@@ -11,6 +11,7 @@ rule bowtie2_build:
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
     params:
         idx_path = config["bowtie2"]["index-path"]
+    conda: "../envs/bowtie2.yaml"
     log: "logs/bowtie2_build-{basename}.log"
     shell: """
         (bowtie2-build {input.fasta} {params.idx_path}/{wildcards.basename}) &> {log}
@@ -28,6 +29,7 @@ rule align:
     params:
         outbase =  config["bowtie2"]["index-path"] + "/" +  config["combinedgenome"]["name"],
         minmapq = config["bowtie2"]["minmapq"]
+    conda: "../envs/bowtie2.yaml"
     threads : config["threads"]
     shell: """
         (bowtie2 -x {params.outbase} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
