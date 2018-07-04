@@ -70,8 +70,7 @@ onsuccess:
 
 localrules:
     all,
-    make_stranded_annotations,
-    make_ratio_annotation, cat_ratio_counts
+    # make_ratio_annotation, cat_ratio_counts
 
 rule all:
     input:
@@ -109,84 +108,71 @@ rule all:
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),
         #expand(expand("ratios/{{ratio}}/{condition}-v-{control}/{{factor}}-chipnexus-{{ratio}}_{{status}}_{condition}-v-{control}_violin.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"], ratio=config["ratios"], status=["all", "passing"])
 
-rule make_stranded_genome:
-    input:
-        exp = config["genome"]["chrsizes"],
-        si = config["genome"]["sichrsizes"]
-    output:
-        exp = os.path.splitext(config["genome"]["chrsizes"])[0] + "-STRANDED.tsv",
-        si= os.path.splitext(config["genome"]["sichrsizes"])[0] + "-STRANDED.tsv",
-    log: "logs/make_stranded_genome.log"
-    shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2}}{{print $1"-minus", $2}}' {input.exp} > {output.exp}) &> {log}
-        (awk 'BEGIN{{FS=OFS="\t"}}{{print $1"-plus", $2}}{{print $1"-minus", $2}}' {input.si} > {output.si}) &> {log}
-        """
+# rule make_ratio_annotation:
+#     input:
+#         lambda wc: config["ratios"][wc.ratio]["path"]
+#     params:
+#         totalsize = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"] + config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
+#     output:
+#         "ratios/{ratio}/{ratio}.bed"
+#     log: "logs/make_ratio_annotation/make_ratio_annotation-{ratio}.log"
+#     shell:  """
+#         (awk 'BEGIN{{FS=OFS="\t"}} ($3-$2)>={params.totalsize}' {input} > {output}) &> {log}
+#         """
 
-rule make_ratio_annotation:
-    input:
-        lambda wc: config["ratios"][wc.ratio]["path"]
-    params:
-        totalsize = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"] + config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
-    output:
-        "ratios/{ratio}/{ratio}.bed"
-    log: "logs/make_ratio_annotation/make_ratio_annotation-{ratio}.log"
-    shell:  """
-        (awk 'BEGIN{{FS=OFS="\t"}} ($3-$2)>={params.totalsize}' {input} > {output}) &> {log}
-        """
+# rule ratio_counts:
+#     input:
+#         annotation = "ratios/{ratio}/{ratio}.bed",
+#         bw = "coverage/libsizenorm/{sample}_" + config["factor"] + "-chipnexus-libsizenorm-midpoints.bw"
+#     output:
+#         dtfile = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.mat.gz"),
+#         matrix = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.tsv"),
+#         melted = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}-melted.tsv.gz"),
+#     params:
+#         group = lambda wc : SAMPLES[wc.sample]["group"],
+#         upstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["upstream"],
+#         dnstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["dnstream"],
+#         refpoint = lambda wc: config["ratios"][wc.ratio][wc.fractype]["refpoint"]
+#     threads: config["threads"]
+#     log: "logs/ratio_counts/ratio_counts-{ratio}-{fractype}-{sample}.log"
+#     shell: """
+#         (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize $(echo {params.upstream} + {params.dnstream} | bc) --averageTypeBins sum -p {threads}) &> {log}
+#         (Rscript scripts/melt_matrix.R -i {output.matrix} -r TSS --group {params.group} -s {wildcards.sample} -a none -b $(echo {params.upstream} + {params.dnstream} | bc) -u {params.upstream} -o {output.melted}) &>> {log}
+#         """
 
-rule ratio_counts:
-    input:
-        annotation = "ratios/{ratio}/{ratio}.bed",
-        bw = "coverage/libsizenorm/{sample}_" + config["factor"] + "-chipnexus-libsizenorm-midpoints.bw"
-    output:
-        dtfile = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.mat.gz"),
-        matrix = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}.tsv"),
-        melted = temp("ratios/{ratio}/{ratio}_{fractype}_{sample}-melted.tsv.gz"),
-    params:
-        group = lambda wc : SAMPLES[wc.sample]["group"],
-        upstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["upstream"],
-        dnstream = lambda wc: config["ratios"][wc.ratio][wc.fractype]["dnstream"],
-        refpoint = lambda wc: config["ratios"][wc.ratio][wc.fractype]["refpoint"]
-    threads: config["threads"]
-    log: "logs/ratio_counts/ratio_counts-{ratio}-{fractype}-{sample}.log"
-    shell: """
-        (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize $(echo {params.upstream} + {params.dnstream} | bc) --averageTypeBins sum -p {threads}) &> {log}
-        (Rscript scripts/melt_matrix.R -i {output.matrix} -r TSS --group {params.group} -s {wildcards.sample} -a none -b $(echo {params.upstream} + {params.dnstream} | bc) -u {params.upstream} -o {output.melted}) &>> {log}
-        """
+# rule cat_ratio_counts:
+#     input:
+#         expand("ratios/{{ratio}}/{{ratio}}_{{fractype}}_{sample}-melted.tsv.gz", sample=SAMPLES)
+#     output:
+#         "ratios/{ratio}/allsamples_{ratio}_{fractype}.tsv.gz"
+#     log: "logs/cat_ratio_counts/cat_ratio_counts-{ratio}-{fractype}.log"
+#     shell: """
+#         (cat {input} > {output}) &> {log}
+#         """
 
-rule cat_ratio_counts:
-    input:
-        expand("ratios/{{ratio}}/{{ratio}}_{{fractype}}_{sample}-melted.tsv.gz", sample=SAMPLES)
-    output:
-        "ratios/{ratio}/allsamples_{ratio}_{fractype}.tsv.gz"
-    log: "logs/cat_ratio_counts/cat_ratio_counts-{ratio}-{fractype}.log"
-    shell: """
-        (cat {input} > {output}) &> {log}
-        """
+# def ratiosamples(wc):
+#     dd = SAMPLES if wc.status=="all" else PASSING
+#     if wc.condition=="all":
+#         return list(dd.keys())
+#     else:
+#         return [k for k,v in dd.items() if v["group"]==wc.control or v["group"]==wc.condition]
 
-def ratiosamples(wc):
-    dd = SAMPLES if wc.status=="all" else PASSING
-    if wc.condition=="all":
-        return list(dd.keys())
-    else:
-        return [k for k,v in dd.items() if v["group"]==wc.control or v["group"]==wc.condition]
-
-rule plot_ratios:
-    input:
-        numerator = "ratios/{ratio}/allsamples_{ratio}_numerator.tsv.gz",
-        denominator = "ratios/{ratio}/allsamples_{ratio}_denominator.tsv.gz",
-    output:
-        violin = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
-        ecdf = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
-    params:
-        num_size = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"],
-        den_size = lambda wc: config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
-        pcount = 1e-3,
-        samplelist = ratiosamples,
-        ratio_label = lambda wc: config["ratios"][wc.ratio]["ratio_name"],
-        num_label = lambda wc: config["ratios"][wc.ratio]["numerator"]["region_label"],
-        den_label = lambda wc: config["ratios"][wc.ratio]["denominator"]["region_label"],
-        annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
-    script:
-        "scripts/ratio.R"
+# rule plot_ratios:
+#     input:
+#         numerator = "ratios/{ratio}/allsamples_{ratio}_numerator.tsv.gz",
+#         denominator = "ratios/{ratio}/allsamples_{ratio}_denominator.tsv.gz",
+#     output:
+#         violin = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_violin.svg",
+#         ecdf = "ratios/{ratio}/{condition}-v-{control}/{factor}-chipnexus-{ratio}_{status}_{condition}-v-{control}_ecdf.svg"
+#     params:
+#         num_size = lambda wc: config["ratios"][wc.ratio]["numerator"]["upstream"] + config["ratios"][wc.ratio]["numerator"]["dnstream"],
+#         den_size = lambda wc: config["ratios"][wc.ratio]["denominator"]["upstream"] + config["ratios"][wc.ratio]["denominator"]["dnstream"],
+#         pcount = 1e-3,
+#         samplelist = ratiosamples,
+#         ratio_label = lambda wc: config["ratios"][wc.ratio]["ratio_name"],
+#         num_label = lambda wc: config["ratios"][wc.ratio]["numerator"]["region_label"],
+#         den_label = lambda wc: config["ratios"][wc.ratio]["denominator"]["region_label"],
+#         annotation_label = lambda wc: config["ratios"][wc.ratio]["label"]
+#     script:
+#         "scripts/ratio.R"
 
