@@ -106,8 +106,8 @@ rule all:
         f"qual_ctrl/read_processing/{FACTOR}-chipnexus_read-processing-loss.svg",
         expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=["all","passing"]) if SISAMPLES else [],
         #scatterplots
-        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["corr-windowsizes"]),
-        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["corr-windowsizes"]) if SISAMPLES else [],
+        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]),
+        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]) if SISAMPLES else [],
         ##categorise peaks
         expand("peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-{category}.narrowpeak", group=GROUPS, factor=FACTOR, category=CATEGORIES),
         #expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
