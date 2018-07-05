@@ -21,7 +21,7 @@ rule fastqc_pre_and_unaligned:
     wildcard_constraints:
         read_status="raw|cleaned|unaligned"
     threads: config["threads"]
-    log: "logs/fastqc/fastqc_{read_status}-{sample}.log"
+    log: "logs/fastqc/fastqc_{read_status}_{sample}.log"
     shell: """
         (mkdir -p qual_ctrl/fastqc/{wildcards.read_status}) &> {log}
         (fastqc --adapters <(echo -e "adapter\t{params.adapter}") --nogroup --noextract -t {threads} -o qual_ctrl/fastqc/{wildcards.read_status} {input}) &>> {log}
@@ -37,7 +37,7 @@ rule fastqc_aligned:
     output:
         "qual_ctrl/fastqc/aligned_noPCRdup/{sample}_fastqc-data-aligned_noPCRdup.txt"
     threads : config["threads"]
-    log: "logs/fastqc/fastqc_aligned_noPCRdup-{sample}.log"
+    log: "logs/fastqc/fastqc_aligned_noPCRdup_{sample}.log"
     shell: """
         (mkdir -p qual_ctrl/fastqc/aligned_noPCRdup) &> {log}
         (bedtools bamtofastq -fq qual_ctrl/fastqc/aligned_noPCRdup/{params.fname}.fastq -i {input}) &>> {log}

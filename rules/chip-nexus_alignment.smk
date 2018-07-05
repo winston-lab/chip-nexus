@@ -6,7 +6,7 @@ localrules:
 
 rule bowtie2_build:
     input:
-        fasta = config["combinedgenome"]["fasta"]
+        fasta = config["genome"]["fasta"] if not SISAMPLES else config["combinedgenome"]["fasta"]
     output:
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.{num}.bt2", num=[1,2,3,4]),
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
@@ -20,20 +20,21 @@ rule bowtie2_build:
 
 rule align:
     input:
-        expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".{num}.bt2", num=[1,2,3,4]),
-        expand(config["bowtie2"]["index-path"] + "/" + config["combinedgenome"]["name"] + ".rev.{num}.bt2", num=[1,2]),
+        expand(config["bowtie2"]["index-path"] + "/" + (config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"]) + ".{num}.bt2", num=[1,2,3,4]),
+        expand(config["bowtie2"]["index-path"] + "/" + (config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"]) + ".rev.{num}.bt2", num=[1,2]),
         fastq = f"fastq/cleaned/{{sample}}_{FACTOR}-chipnexus-clean.fastq.gz"
     output:
         bam = temp(f"alignment/{{sample}}_{FACTOR}-chipnexus-uniquemappers.bam"),
         unaligned_fastq = f"fastq/{{sample}}_{FACTOR}-chipnexus-unaligned.fastq.gz",
         log = "logs/align/align_{sample}.log"
     params:
-        outbase =  config["bowtie2"]["index-path"] + "/" +  config["combinedgenome"]["name"],
+        idx_path = config["bowtie2"]["index-path"],
+        basename = config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"],
         minmapq = config["bowtie2"]["minmapq"]
     conda: "../envs/bowtie2.yaml"
     threads : config["threads"]
     shell: """
-        (bowtie2 -x {params.outbase} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
+        (bowtie2 -x {params.idx_path}/{params.basename} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
         """
 
 rule remove_PCR_duplicates:
@@ -62,7 +63,7 @@ rule bam_separate_species:
     input:
         bam = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam",
         bai = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai",
-        fasta = config["combinedgenome"]["fasta"]
+        fasta = [] if not SISAMPLES else config["combinedgenome"]["fasta"]
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-{{species}}.bam",
     params:

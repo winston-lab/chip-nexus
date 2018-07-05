@@ -101,8 +101,8 @@ join_window_counts:
     mem: 4000
 
 plot_scatter_plots:
-    time : 60
-    mem : 12000
+    time : 30
+    mem : 18000
 
 compute_matrix:
     time : 20
