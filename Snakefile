@@ -19,8 +19,11 @@ GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
 
 controlgroups = [v for k,v in config["comparisons"]["libsizenorm"].items()]
 conditiongroups = [k for k,v in config["comparisons"]["libsizenorm"].items()]
-controlgroups_si = [v for k,v in config["comparisons"]["spikenorm"].items()]
-conditiongroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
+
+comparisons_si = config["comparisons"]["spikenorm"]
+if comparisons_si:
+    controlgroups_si = [v for k,v in config["comparisons"]["spikenorm"].items()]
+    conditiongroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
 
 CATEGORIES = ["genic", "intragenic", "intergenic"]
 
@@ -29,8 +32,8 @@ FIGURES = config["figures"]
 wildcard_constraints:
     sample = "|".join(re.escape(x) for x in list(SAMPLES.keys())),
     group = "|".join(re.escape(x) for x in GROUPS),
-    control = "|".join(set(re.escape(x) for x in controlgroups + controlgroups_si + ["all"])),
-    condition = "|".join(set(re.escape(x) for x in conditiongroups + conditiongroups_si + ["all"])),
+    control = "|".join(set(re.escape(x) for x in controlgroups + (controlgroups_si if comparisons_si else []) + ["all"])),
+    condition = "|".join(set(re.escape(x) for x in conditiongroups + (conditiongroups_si if comparisons_si else []) + ["all"])),
     species = "experimental|spikein",
     read_status = "raw|cleaned|aligned_noPCRdup|unaligned",
     category = "|".join(CATEGORIES + ["all"]),
@@ -107,21 +110,21 @@ rule all:
         expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=["all","passing"]) if SISAMPLES else [],
         #scatterplots
         expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]),
-        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]) if SISAMPLES else [],
+        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]) if SISAMPLES and comparisons_si else [],
         ##categorise peaks
         expand("peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-{category}.narrowpeak", group=GROUPS, factor=FACTOR, category=CATEGORIES),
         #expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
         expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=FACTOR, status=["all", "passing"]) if config["plot_figures"] else [],
-        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=FACTOR, status=["all", "passing"]) if config["plot_figures"] and SISAMPLES else [],
+        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=FACTOR, status=["all", "passing"]) if config["plot_figures"] and SISAMPLES and comparisons_si else [],
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/libsizenorm/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-qc-plots.svg", zip, condition=conditiongroups, control=controlgroups), factor=FACTOR),
-        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-qc-plots.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR),
+        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-qc-plots.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR) if comparisons_si else [],
         expand(expand("diff_binding/{condition}-v-{control}/libsizenorm/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-diffbind-results-{{direction}}.narrowpeak", zip, condition=conditiongroups, control=controlgroups), factor=FACTOR, direction=["all","up","unchanged","down"]),
-        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-diffbind-results-{{direction}}.narrowpeak", zip, condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR, direction=["all","up","unchanged","down"]),
+        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-diffbind-results-{{direction}}.narrowpeak", zip, condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR, direction=["all","up","unchanged","down"]) if comparisons_si else [],
         #categorize DB peaks
         expand(expand("diff_binding/{condition}-v-{control}/libsizenorm/{{category}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-diffbind-results-{{category}}-{{direction}}.narrowpeak", condition=conditiongroups, control=controlgroups), factor=FACTOR, direction=["all","up","unchanged","down"], category=CATEGORIES),
-        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{{category}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-diffbind-results-{{category}}-{{direction}}.narrowpeak", condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR, direction=["all","up","unchanged","down"], category=CATEGORIES),
+        expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{{category}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-diffbind-results-{{category}}-{{direction}}.narrowpeak", condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR, direction=["all","up","unchanged","down"], category=CATEGORIES) if comparisons_si else [],
         ##DB summary
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-libsizenorm-diffbind-summary.svg", zip, condition=conditiongroups, control=controlgroups), factor=config["factor"]),
         #expand(expand("diff_binding/{condition}-v-{control}/{condition}-v-{control}-{{factor}}-chipnexus-spikenorm-diffbind-summary.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=config["factor"]),

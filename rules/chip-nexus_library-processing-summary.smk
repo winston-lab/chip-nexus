@@ -53,8 +53,8 @@ rule plot_spikein_pct:
         stats = f"qual_ctrl/spikein/{FACTOR}-chipnexus_spikein-stats-{{status}}.tsv"
     params:
         samplelist = lambda wc : list(SISAMPLES.keys()) if wc.status=="all" else list(SIPASSING.keys()),
-        conditions = conditiongroups_si,
-        controls = controlgroups_si
+        conditions = conditiongroups_si if comparisons_si else [],
+        controls = controlgroups_si if comparisons_si else []
     conda: "../envs/tidyverse.yaml"
     script: "../scripts/plot_si_pct.R"
 
