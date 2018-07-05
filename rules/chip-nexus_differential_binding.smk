@@ -6,23 +6,23 @@ localrules:
 
 rule map_counts_to_peaks:
     input:
-        bed = "diff_binding/{condition}-v-{control}/{condition}-v-{control}_{type}-{factor}-peaks.bed",
-        bg = lambda wc: "coverage/counts/{sample}_{factor}-chipnexus-counts-midpoints.bedgraph".format(**wc) if wc.type=="experimental" else "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-midpoints.bedgraph".format(**wc)
+        bed = "diff_binding/{condition}-v-{control}/{condition}-v-{control}_{species}-{factor}-peaks.bed",
+        bg = lambda wc: "coverage/counts/{sample}_{factor}-chipnexus-counts-midpoints.bedgraph".format(**wc) if wc.species=="experimental" else "coverage/sicounts/{sample}_{factor}-chipnexus-sicounts-midpoints.bedgraph".format(**wc)
     output:
-        temp("diff_binding/{condition}-v-{control}/{sample}_{type}-{factor}-chipnexus-peakcounts.tsv")
-    log: "logs/map_counts_to_peaks/map_counts_to_peaks-{condition}-v-{control}-{sample}-{type}-{factor}.log"
+        temp("diff_binding/{condition}-v-{control}/{sample}_{species}-{factor}-chipnexus-peakcounts.tsv")
+    log: "logs/map_counts_to_peaks/map_counts_to_peaks-{condition}-v-{control}-{sample}-{species}-{factor}.log"
     shell: """
         (bedtools map -a {input.bed} -b {input.bg} -c 4 -o sum > {output}) &> {log}
         """
 
 rule combine_peak_counts:
     input:
-        lambda wc: ["diff_binding/{condition}-v-{control}/".format(**wc) + sample + "_{type}-{factor}-chipnexus-peakcounts.tsv".format(**wc) for sample in get_samples("passing", "libsizenorm", [wc.control, wc.condition])]
+        lambda wc: ["diff_binding/{condition}-v-{control}/".format(**wc) + sample + "_{species}-{factor}-chipnexus-peakcounts.tsv".format(**wc) for sample in get_samples("passing", "libsizenorm", [wc.control, wc.condition])]
     output:
-        "diff_binding/{condition}-v-{control}/{condition}-v-{control}_allsamples-{type}-{factor}-chipnexus-allpeakcounts.tsv.gz"
+        "diff_binding/{condition}-v-{control}/{condition}-v-{control}_allsamples-{species}-{factor}-chipnexus-allpeakcounts.tsv.gz"
     params:
         names = lambda wc: "\t".join(get_samples("passing", "libsizenorm", [wc.control, wc.condition]))
-    log: "logs/combine_peak_counts/combine_peak_counts_{condition}-v-{control}_{type}-{factor}.log"
+    log: "logs/combine_peak_counts/combine_peak_counts_{condition}-v-{control}_{species}-{factor}.log"
     shell: """
         (bedtools unionbedg -i {input} -header -names {params.names} | bash scripts/cleanUnionbedg.sh | pigz -f > {output}) &> {log}
         """

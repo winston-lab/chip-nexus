@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import re
 from math import log2
 import itertools
 
@@ -24,6 +25,24 @@ conditiongroups_si = [k for k,v in config["comparisons"]["spikenorm"].items()]
 CATEGORIES = ["genic", "intragenic", "intergenic"]
 
 FIGURES = config["figures"]
+
+wildcard_constraints:
+    sample = "|".join(re.escape(x) for x in list(SAMPLES.keys())),
+    group = "|".join(re.escape(x) for x in GROUPS),
+    control = "|".join(set(re.escape(x) for x in controlgroups + controlgroups_si + ["all"])),
+    condition = "|".join(set(re.escape(x) for x in conditiongroups + conditiongroups_si + ["all"])),
+    species = "experimental|spikein",
+    read_status = "raw|cleaned|aligned_noPCRdup|unaligned",
+    category = "|".join(CATEGORIES + ["all"]),
+    figure = "|".join(re.escape(x) for x in list(FIGURES.keys())),
+    annotation = "|".join(re.escape(x) for x in set(itertools.chain(*[FIGURES[figure]["annotations"].keys() for figure in FIGURES]))),
+    status = "all|passing",
+    counttype= "counts|sicounts",
+    norm = "counts|sicounts|libsizenorm|spikenorm",
+    strand = "SENSE|ANTISENSE|plus|minus|midpoints|protection",
+    windowsize = "\d+",
+    direction = "all|up|unchanged|down",
+    factor=FACTOR
 
 status_norm_sample_dict = {
     "all":
