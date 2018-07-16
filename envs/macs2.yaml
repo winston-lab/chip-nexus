@@ -1,8 +1,13 @@
 name: macs2
 channels:
     - bioconda
-    - r
     - conda-forge
+    - r
+    - https://repo.anaconda.com/pkgs/free/linux-64
+    - https://repo.anaconda.com/pkgs/free/noarch
+    - https://repo.anaconda.com/pkgs/pro/linux-64
+    - https://repo.anaconda.com/pkgs/pro/noarch
+    - nodefaults
 dependencies:
     - macs2=2.1.1.20160309
     - r=3.4.1
