@@ -99,15 +99,15 @@ samples:
 # comparisons to be made in differential binding, enrichment, data visualization, scatterplots, etc, etc.
 comparisons:
     libsizenorm:
-        diamide: YPD  # CONDITION: CONTROL . Tags must match 'group' tags in sample metadata
-        nitrogen: SC
-        SD: SC
-        spt6-1004-37C: WT-37C
+        - diamide: YPD  # CONDITION: CONTROL . Tags must match 'group' tags in sample metadata
+        - nitrogen: SC
+        - SD: SC
+        - spt6-1004-37C: WT-37C
     spikenorm:
-        diamide: YPD  # It's okay to have no comparisons if no spikein normalized comparisons are to be made
-        nitrogen: SC
-        SD: SC
-        spt6-1004-37C: WT-37C
+        - diamide: YPD  # It's okay to have no comparisons if no spikein normalized comparisons are to be made
+        - nitrogen: SC
+        - SD: SC
+        - spt6-1004-37C: WT-37C
 
 # [INT] binsizes for scatterplots
 scatterplot_binsizes:
