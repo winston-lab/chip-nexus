@@ -96,6 +96,8 @@ localrules:
 
 rule all:
     input:
+        #require config file so that it gets archived
+        "config.yaml",
         #FastQC
         f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_sequence_content.svg',
         #alignment
