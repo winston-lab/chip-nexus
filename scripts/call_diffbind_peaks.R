@@ -133,7 +133,7 @@ main = function(intable, norm, sitable, samples, groups, condition, control, alp
 
     resdf = resdf %>%
         separate(name, into=c('chrom','start','end'), sep="-") %>%
-        mutate(strand=".") %>% 
+        mutate(strand=".") %>%
         mutate_if(is.numeric, round, 3) %>%
         mutate_at(vars(start, score, end), funs(as.integer(.))) %>%
         select(chrom, start, end, peak_name, score, strand,
