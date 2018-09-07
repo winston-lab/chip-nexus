@@ -680,8 +680,8 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         meta_sample_protection = meta_sample_protection + facet_grid(replicate ~ annotation)
         meta_sample_stranded = meta_sample_stranded + facet_grid(replicate ~ annotation)
 
-        meta_sample_protection_overlay = meta_sample_protection + facet_grid(.~annotation)
-        meta_sample_stranded_overlay = meta_sample_stranded + facet_grid(.~annotation)
+        meta_sample_overlay_protection = meta_sample_protection + facet_grid(.~annotation)
+        meta_sample_overlay_stranded = meta_sample_stranded + facet_grid(.~annotation)
 
         meta_group_protection = meta_group_protection + facet_grid(.~annotation)
         meta_group_stranded = meta_group_stranded + facet_grid(.~annotation)
