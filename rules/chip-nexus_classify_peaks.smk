@@ -92,7 +92,7 @@ rule classify_intragenic_diffbind_peaks:
         bed = "diff_binding/{condition}-v-{control}/{norm}/intragenic/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-intragenic-{direction}-summits.bed",
     log : "logs/classify_diffbind_peaks/classify_intragenic_diffbind_peaks-{condition}-v-{control}_{norm}-{direction}-{factor}.log"
     shell: """
-        (tail -n +2 {input.results} | paste - <(cut -f10 {input.narrowpeak}) | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b <(cut -f1-6 {input.orf_anno}) -wo | awk 'BEGIN{{FS=OFS="\t"}} {{summit=$2+$15}} $6=="+"{{$22=summit-$17}} $6=="-"{{$22=$18-(summit+1)}} {{print $0}}'  | cat <(paste <(head -n 1 {input.results}) <(echo -e "peak_summit\torf_chrom\torf_start\torf_end\torf_name\torf_score\torf_strand\tatg_to_peak_dist")) - > {output.results}) &> {log}
+        (tail -n +2 {input.results} | paste - <(cut -f10 {input.narrowpeak}) | bedtools intersect -a stdin -b {input.genic_anno} -v | bedtools intersect -a stdin -b <(cut -f1-6 {input.orf_anno}) -wo | awk 'BEGIN{{FS=OFS="\t"}} {{summit=$2+$15}} $21=="+"{{$22=summit-$17}} $21=="-"{{$22=$18-(summit+1)}} {{print $0}}'  | cat <(paste <(head -n 1 {input.results}) <(echo -e "peak_summit\torf_chrom\torf_start\torf_end\torf_name\torf_score\torf_strand\tatg_to_peak_dist")) - > {output.results}) &> {log}
         (bedtools intersect -a {input.narrowpeak} -b {input.genic_anno} -v | bedtools intersect -a stdin -b {input.orf_anno} -u | tee {output.narrowpeak} | awk 'BEGIN{{FS=OFS="\t"}}{{start=$2+$10; print $1, start, start+1, $4, $5, $6}}' > {output.bed}) &>> {log}
         """
 
