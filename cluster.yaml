@@ -117,10 +117,7 @@ summarise_db_results:
     time: 15
     mem : 6000
 
-ratio_counts:
-    time: 10
-    mem: 4000
-
-plot_ratios:
+gene_ontology:
     time: 20
-    mem: 6000
+    mem: 10000
+
