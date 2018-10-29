@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 localrules:
+    build_combined_genome,
     bowtie2_build,
     index_bam
 
@@ -12,12 +13,12 @@ basename = "{exp_name}_{exp_fasta}_{si_name}_{si_fasta}".format(exp_name = confi
 rule build_combined_genome:
     input:
         experimental = config["genome"]["fasta"],
-        spikein = config["spike_in"]["fasta"]
+        spikein = config["spike_in"]["fasta"] if SISAMPLES
     output:
         "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename),
     params:
         exp_name = config["genome"]["name"],
-        si_name = config["spike_in"]["name"]
+        si_name = config["spike_in"]["name"] if SISAMPLES
     log: "logs/build_combined_genome.log"
     shell: """
         (sed 's/>/>{params.exp_name}_/g' {input.experimental} | \
@@ -86,7 +87,7 @@ rule bam_separate_species:
     input:
         bam = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam",
         bai = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai",
-        fasta = "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename) if SISAMPLES else config["genome"]["fasta"],
+        fasta = "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename) if SISAMPLES else [],
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-{{species}}.bam",
     params:

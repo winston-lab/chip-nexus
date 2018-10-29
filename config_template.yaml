@@ -13,8 +13,6 @@ spike_in:
 
 factor: tfiib  # [STRING] name of the factor being pulled down (for file-naming purposes only)
 
-spikein-pct: 0.05  # [FLOAT] percent spike-in added. This is only used to scale spike-in normalized coverage so it is on the same scale as library size normalized coverage files
-
 # sample metadata
 samples:
     YPD-1:  # [STRING] sample name. Do not use underscores ("_").
