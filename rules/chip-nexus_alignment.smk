@@ -4,9 +4,29 @@ localrules:
     bowtie2_build,
     index_bam
 
+basename = "{exp_name}_{exp_fasta}_{si_name}_{si_fasta}".format(exp_name = config["genome"]["name"],
+                                                                exp_fasta = os.path.splitext(os.path.basename(config["genome"]["fasta"]))[0],
+                                                                si_name = config["spike_in"]["name"],
+                                                                si_fasta = os.path.splitext(os.path.basename(config["spike_in"]["fasta"]))[0]) if SISAMPLES else os.path.splitext(os.path.basename(config["genome"]["fasta"]))[0]
+
+rule build_combined_genome:
+    input:
+        experimental = config["genome"]["fasta"],
+        spikein = config["spike_in"]["fasta"]
+    output:
+        "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename),
+    params:
+        exp_name = config["genome"]["name"],
+        si_name = config["spike_in"]["name"]
+    log: "logs/build_combined_genome.log"
+    shell: """
+        (sed 's/>/>{params.exp_name}_/g' {input.experimental} | \
+        cat - <(sed 's/>/>{params.si_name}_/g' {input.spikein}) > {output}) &> {log}
+        """
+
 rule bowtie2_build:
     input:
-        fasta = config["genome"]["fasta"] if not SISAMPLES else config["combinedgenome"]["fasta"]
+        "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename) if SISAMPLES else config["genome"]["fasta"],
     output:
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.{num}.bt2", num=[1,2,3,4]),
         expand(config["bowtie2"]["index-path"] + "/{{basename}}.rev.{num}.bt2", num=[1,2])
@@ -15,13 +35,17 @@ rule bowtie2_build:
     conda: "../envs/bowtie2.yaml"
     log: "logs/bowtie2_build-{basename}.log"
     shell: """
-        (bowtie2-build {input.fasta} {params.idx_path}/{wildcards.basename}) &> {log}
+        (bowtie2-build {input} {params.idx_path}/{wildcards.basename}) &> {log}
         """
 
 rule align:
     input:
-        expand(config["bowtie2"]["index-path"] + "/" + (config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"]) + ".{num}.bt2", num=[1,2,3,4]),
-        expand(config["bowtie2"]["index-path"] + "/" + (config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"]) + ".rev.{num}.bt2", num=[1,2]),
+        expand("{directory}/{bn}.{num}.bt2", directory = config["bowtie2"]["index-path"],
+                                             bn = basename,
+                                             num = [1,2,3,4]),
+        expand("{directory}/{bn}.rev.{num}.bt2", directory = config["bowtie2"]["index-path"],
+                                             bn = basename,
+                                             num = [1,2]),
         fastq = f"fastq/cleaned/{{sample}}_{FACTOR}-chipnexus-clean.fastq.gz"
     output:
         bam = temp(f"alignment/{{sample}}_{FACTOR}-chipnexus-uniquemappers.bam"),
@@ -29,12 +53,11 @@ rule align:
         log = "logs/align/align_{sample}.log"
     params:
         idx_path = config["bowtie2"]["index-path"],
-        basename = config["genome"]["name"] if not SISAMPLES else config["combinedgenome"]["name"],
         minmapq = config["bowtie2"]["minmapq"]
     conda: "../envs/bowtie2.yaml"
     threads : config["threads"]
     shell: """
-        (bowtie2 -x {params.idx_path}/{params.basename} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
+        (bowtie2 -x {params.idx_path}/{basename} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
         """
 
 rule remove_PCR_duplicates:
@@ -63,15 +86,15 @@ rule bam_separate_species:
     input:
         bam = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam",
         bai = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai",
-        fasta = [] if not SISAMPLES else config["combinedgenome"]["fasta"]
+        fasta = "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename) if SISAMPLES else config["genome"]["fasta"],
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-{{species}}.bam",
     params:
-        filterprefix = lambda wc: config["combinedgenome"]["spikein_prefix"] if wc.species=="experimental" else config["combinedgenome"]["experimental_prefix"],
-        prefix = lambda wc: config["combinedgenome"]["experimental_prefix"] if wc.species=="experimental" else config["combinedgenome"]["spikein_prefix"]
+        filterprefix = lambda wc: config["spike_in"]["name"] if wc.species=="experimental" else config["genome"]["name"],
+        prefix = lambda wc: config["genome"]["name"] if wc.species=="experimental" else config["spike_in"]["name"]
     threads: config["threads"]
     log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
     shell: """
-        (samtools view -h {input.bam} $(faidx {input.fasta} -i chromsizes | grep {params.prefix} | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}' | sed 's/{params.prefix}//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
+        (samtools view -h {input.bam} $(faidx {input.fasta} -i chromsizes | grep {params.prefix}_ | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}_' | sed 's/{params.prefix}_//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
         """
 

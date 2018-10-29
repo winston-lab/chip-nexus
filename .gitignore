@@ -6,6 +6,7 @@ coverage/
 datavis/
 ratios/
 diff_binding/
+gene_ontology/
 peakcalling/
 qual_ctrl/
 fastq/*

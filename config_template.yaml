@@ -3,21 +3,13 @@
 #
 # relative paths are okay
 #
-# for the combined experimental and spikein genomes
-combinedgenome:
-    name: ScSp  # [STRING] used only to name the bowtie2 indices
-    fasta: ../genome/ScSp.R64.2-1.ASM294v2.fa  # path to combined fasta file
-    experimental_prefix: Scer_  # prefix for experimental species
-    spikein_prefix: Spom_  # prefix for spikein species
-
-# for the experimental genome only, except for 'spikein_fasta'
 genome:
-    name: Sc  # [STRING] used only to name the bowtie2 indices if no spikeins
-    fasta: ../genome/S_cerevisiae.R64-2-1.fa  # path to experimental fasta file
-    spikein_fasta: ../../spt5/genome/S_pombe.ASM294v2.fa  # path to spikein fasta file
-    orf-annotation: ../genome/annotations/Scer_nondubious_ORFs_and_blocked_reading_frames.bed  # path to BED6+ file of ORF annotations
-    transcripts: ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed  # path to BED6+ file of transcript annotations
     annotation_workflow: ../build-annotations-cerevisiae/  # path to Snakemake workflow used to build annotations of genic, convergent, divergent, etc. regions using the same fasta and annotation files listed above
+
+spike_in:
+    name: Spom
+    proportion: 0.05
+    fasta: ../genomefiles_cerevisiae/S_pombe.ASM294v2.fa
 
 factor: tfiib  # [STRING] name of the factor being pulled down (for file-naming purposes only)
 

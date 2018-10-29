@@ -2,12 +2,15 @@
 
 import os
 import re
-from math import log2
 import itertools
+from math import log2
 
 configfile: "config.yaml"
+
 subworkflow build_annotations:
     workdir: config["genome"]["annotation_workflow"]
+
+configfile: build_annotations("config.yaml")
 
 FACTOR = config["factor"]
 

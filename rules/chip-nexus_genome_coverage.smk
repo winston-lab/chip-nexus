@@ -36,7 +36,7 @@ rule protection_coverage:
 rule midpoint_coverage:
     input:
         tsv = lambda wc: expand("peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.xls", factor=FACTOR, group=GROUPS, species= ("experimental" if wc.counttype=="counts" else "spikein")),
-        fasta = lambda wc: config["genome"]["fasta"] if wc.counttype=="counts" else config["genome"]["spikein_fasta"],
+        fasta = lambda wc: config["genome"]["fasta"] if wc.counttype=="counts" else config["spike_in"]["fasta"],
         plus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-plus.bedgraph",
         minus = "coverage/{counttype}/{sample}_{factor}-chipnexus-{counttype}-minus.bedgraph"
     output:
@@ -82,7 +82,7 @@ rule make_stranded_bedgraph:
 rule bedgraph_to_bigwig:
     input:
         bg = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph",
-        fasta = lambda wc: config["genome"]["spikein_fasta"] if wc.norm=="sicounts" else config["genome"]["fasta"]
+        fasta = lambda wc: config["spike_in"]["fasta"] if wc.norm=="sicounts" else config["genome"]["fasta"]
     output:
         "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     params:
