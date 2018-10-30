@@ -27,7 +27,7 @@ rule classify_genic_peaks:
 rule classify_intragenic_peaks:
     input:
         genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
-        orf_anno = config["genome"]["orf_annotation"],
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
         peaks = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks.narrowPeak",
     output:
         table = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-intragenic.tsv",
@@ -49,8 +49,8 @@ rule classify_intragenic_peaks:
 rule classify_intergenic_peaks:
     input:
         intergenic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_intergenic-regions.bed"),
-        transcript_anno = config["genome"]["transcript_annotation"],
-        orf_anno = config["genome"]["orf_annotation"],
+        transcript_anno = os.path.abspath(build_annotations(config["genome"]["transcript_annotation"])),
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
         genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
         peaks = "peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks.narrowPeak",
     output:
@@ -108,7 +108,7 @@ rule classify_genic_diffbind_peaks:
 rule classify_intragenic_diffbind_peaks:
     input:
         genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
-        orf_anno = config["genome"]["orf_annotation"],
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
         narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
         results = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.tsv",
     output:
@@ -133,8 +133,8 @@ rule classify_intragenic_diffbind_peaks:
 rule classify_intergenic_diffbind_peaks:
     input:
         intergenic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_intergenic-regions.bed"),
-        transcript_anno = config["genome"]["transcript_annotation"],
-        orf_anno = config["genome"]["orf_annotation"],
+        transcript_anno = os.path.abspath(build_annotations(config["genome"]["transcript_annotation"])),
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
         genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
         narrowpeak = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.narrowpeak",
         results = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-{direction}.tsv",
