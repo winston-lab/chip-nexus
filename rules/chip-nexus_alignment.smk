@@ -13,12 +13,12 @@ basename = "{exp_name}_{exp_fasta}_{si_name}_{si_fasta}".format(exp_name = confi
 rule build_combined_genome:
     input:
         experimental = config["genome"]["fasta"],
-        spikein = config["spike_in"]["fasta"] if SISAMPLES
+        spikein = config["spike_in"]["fasta"] if SISAMPLES else []
     output:
         "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename),
     params:
         exp_name = config["genome"]["name"],
-        si_name = config["spike_in"]["name"] if SISAMPLES
+        si_name = config["spike_in"]["name"] if SISAMPLES else []
     log: "logs/build_combined_genome.log"
     shell: """
         (sed 's/>/>{params.exp_name}_/g' {input.experimental} | \
