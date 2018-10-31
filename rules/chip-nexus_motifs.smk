@@ -18,7 +18,7 @@ rule get_overlapping_motifs:
         distance = config["motifs"]["search-distance"],
     log: "logs/get_upstream_motifs/get_upstream_motifs-{condition}-v-{control}-{norm}-{category}-{direction}-{factor}.log"
     shell: """
-        (sed 's/Inf/255/g' {input.peaks} \
+        (sed 's/Inf/255/g' {input.peaks} | \
         awk 'BEGIN{{FS=OFS="\t"}}{{$2=$2+$10; $3=$2+1; print $0}}' | \
         bedtools slop -b {params.distance} -i stdin -g <(faidx {input.fasta} -i chromsizes) | \
         sort -k1,1 -k2,2n | \
