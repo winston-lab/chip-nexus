@@ -36,7 +36,6 @@ An analysis pipeline for ChIP-nexus data with the following major steps:
 - FASTA files:
     - the 'experimental' genome
     - the spikein genome
-    - a concatenation of the experimental and spikein FASTAs, in which the chromosome names have a prefix indicating their species, e.g. 'Scer_chrI' and 'Spom_chrI'.
 
 - [BED6](https://genome.ucsc.edu/FAQ/FAQformat.html#format1) format annotation files:
     - ORF annotation
