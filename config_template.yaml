@@ -131,6 +131,11 @@ deseq:
 run_gene_ontology: True
 gene_ontology_mapping_file: ../genomefiles_cerevisiae/go_slim_mappings/sgd_go_slim_mapping_2018_2_7.tsv
 
+motifs:
+    run_motif_analyses: True
+    search-distance: 200 #distance on each side of peak summits to search for motifs
+    enrichment-fdr: 0.01
+
 # data visualization settings
 plot_figures: True  # [True|False] plot heatmaps and metagenes?
 figures:

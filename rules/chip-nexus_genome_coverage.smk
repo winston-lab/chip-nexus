@@ -60,7 +60,6 @@ rule normalize_genome_coverage:
     wildcard_constraints:
         norm="libsizenorm|spikenorm",
         strand="plus|minus|protection|midpoints"
-    conda: "../envs/default.yaml"
     log: "logs/normalize_genome_coverage/normalize_genome_coverage-{sample}-{norm}-{strand}-{factor}.log"
     shell: """
         (awk -v norm_factor=$(samtools view -c {input.bam} | paste -d "" - <(echo "/({params.scale_factor}*1000000)") | bc -l) 'BEGIN{{FS=OFS="\t"}}{{$4=$4/norm_factor; print $0}}' {input.counts} > {output.normalized}) &> {log}

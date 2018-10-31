@@ -4,7 +4,7 @@ localrules:
     get_random_motifs,
 
 #bedtools intersect peaks with fimo motifs
-#0. with the summit of the peak as reference, extend annotation to upstream and 'downstream' distances
+#0. with the summit of the peak as reference and strand information from annotation, extend annotation to upstream and 'downstream' distances
 #1. merge overlapping (but not book-ended) features
 #2. intersect with motif file
 rule get_overlapping_motifs:
@@ -15,14 +15,14 @@ rule get_overlapping_motifs:
     output:
         "motifs/{condition}-v-{control}/{norm}/{category}/{condition}-v-{control}_{factor}-chipnexus-{norm}-{category}-{direction}-allFIMOresults.tsv.gz",
     params:
-        upstr = config["motifs"]["enrichment-upstream"],
-        dnstr = config["motifs"]["enrichment-downstream"]
+        distance = config["motifs"]["search-distance"],
     log: "logs/get_upstream_motifs/get_upstream_motifs-{condition}-v-{control}-{norm}-{category}-{direction}-{factor}.log"
     shell: """
-        (awk 'BEGIN{{FS=OFS="\t"}}{{$2=$2+$10; $3=$2+1; print $0}}' {input.peaks} | \
-        bedtools slop -l {params.upstr} -r {params.dnstr} -s -i stdin -g <(faidx {input.fasta} -i chromsizes) | \
+        (sed 's/Inf/255/g' {input.peaks} \
+        awk 'BEGIN{{FS=OFS="\t"}}{{$2=$2+$10; $3=$2+1; print $0}}' | \
+        bedtools slop -b {params.distance} -i stdin -g <(faidx {input.fasta} -i chromsizes) | \
         sort -k1,1 -k2,2n | \
-        bedtools merge -s -d -1 -c 4,5,6,7,8,9 -o collapse,max,first,max,max,max -i stdin | \
+        bedtools merge -d -1 -c 4,5,6,7,8,9 -o collapse,max,first,max,max,max -i stdin | \
         sort -k1,1 -k2,2n | \
         bedtools intersect -a stdin -b {input.motifs} -sorted -F 1 -wao | \
         cut -f18 --complement | \
@@ -37,13 +37,13 @@ rule get_random_motifs:
     output:
         "motifs/random_sequences-allFIMOresults.tsv.gz"
     params:
-        window = config["motifs"]["enrichment-upstream"] + config["motifs"]["enrichment-downstream"] + 1,
+        window = 2*(config["motifs"]["search-distance"])+1,
         n = 6000
     log: "logs/get_random_motifs.log"
     shell: """
         (bedtools random -l {params.window} -n {params.n} -g <(faidx {input.fasta} -i chromsizes) | \
         sort -k1,1 -k2,2n | \
-        bedtools merge -s -d -1 -c 4,5,6 -o collapse,first,first -i stdin | \
+        bedtools merge -d -1 -c 4,5,6 -o collapse,first,first -i stdin | \
         sort -k1,1 -k2,2n | \
         bedtools intersect -a stdin -b {input.motifs} -sorted -F 1 -wao | \
         awk 'BEGIN{{FS=OFS="\t"}}{{print $1, $2, $3, $4, $5, $6, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14}}' | \
