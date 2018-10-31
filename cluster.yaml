@@ -27,13 +27,8 @@ fastqc_aligned:
     n : 2
     mem : 4000
 
-read_processing_numbers:
-    time: 5
-    n: 1
-    mem: 4000
-
 plot_read_processing:
-    time: 5
+    time: 1
     n: 1
     mem: 4000
 
@@ -120,4 +115,21 @@ summarise_db_results:
 gene_ontology:
     time: 2
     mem: 10000
+
+fimo:
+    time: 3
+    mem: 400M
+
+cat_fimo_motifs:
+    time: 30
+    n: 4
+    mem: 2000
+
+get_overlapping_motifs:
+    time: 4
+    mem: 400M
+
+test_motif_enrichment:
+    time: 10
+    mem: 2000
 
