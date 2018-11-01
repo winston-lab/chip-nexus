@@ -52,11 +52,11 @@ bam_separate_species:
     mem : 1000
 
 crosslink_coverage:
-    time : 2
+    time : 4
     mem : 2000
 
 protection_coverage:
-    time : 2
+    time : 3
     mem : 2000
 
 midpoint_coverage:
@@ -84,7 +84,7 @@ differential_binding:
     mem: 8000
 
 diffbind_results_to_narrowpeak:
-  time: 1
+  time: 2
   mem: 4000
 
 map_to_windows:
@@ -92,7 +92,7 @@ map_to_windows:
     mem: 4000
 
 join_window_counts:
-    time: 3
+    time: 5
     mem: 4000
 
 plot_scatter_plots:
