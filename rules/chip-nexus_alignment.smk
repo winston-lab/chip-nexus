@@ -87,7 +87,7 @@ rule bam_separate_species:
     input:
         bam = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam",
         bai = f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai",
-        fasta = "{directory}/{bn}.fa".format(directory = os.path.split(config["genome"]["fasta"])[0], bn=basename) if SISAMPLES else [],
+        fasta = "{directory}/{bn}.fa".format(directory = os.path.split(os.path.abspath(build_annotations(config["genome"]["fasta"])))[0], bn=basename) if SISAMPLES else [],
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates-{{species}}.bam",
     params:
