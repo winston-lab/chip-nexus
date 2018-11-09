@@ -1,79 +1,78 @@
 __default__:
     queue : "short"
-    time : 60
+    time : 10
     n : 1
-    mem : 2000
+    mem : 100
     name : "{rule}.{wildcards}"
     log : "logs/cluster/{rule}.{wildcards}.log"
     err : "logs/cluster/{rule}.{wildcards}.err"
 
 fastqc_pre_and_unaligned:
-    time : 4
+    time : 6
     n : 2
-    mem : 4000
+    mem : 200
 
 clean_reads:
-    time : 10
+    time : 15
     n: 4
-    mem : 2000
+    mem : 150
 
 extract_molecular_barcode:
-    time : 12
+    time : 45
     n : 1
-    mem : 2000
+    mem : 100
 
 fastqc_aligned:
-    time : 3
+    time : 6
     n : 2
-    mem : 4000
-
-plot_read_processing:
-    time: 1
-    n: 1
-    mem: 4000
+    mem : 200
 
 plot_fastqc_summary:
     time: 4
     n: 1
-    mem: 8000
+    mem: 400
+
+plot_read_processing:
+    time: 1
+    n: 1
+    mem: 10
 
 align:
     time : 15
     n : 4
-    mem : 2000
+    mem : 1000
 
 remove_PCR_duplicates:
-    time : 6
-    mem : 4000
+    time : 10
+    mem : 1000
 
 bam_separate_species:
     time : 3
-    n: 2
-    mem : 1000
+    mem : 1
 
 crosslink_coverage:
     time : 4
-    mem : 2000
+    mem : 1
 
 protection_coverage:
     time : 3
-    mem : 2000
+    mem : 1
 
 midpoint_coverage:
     time : 3
-    mem : 2000
+    mem : 1
 
 normalize_genome_coverage:
-    time : 2
-    mem : 2000
+    time : 3
+    mem : 1
 
 make_stranded_bedgraph:
     time: 3
-    mem: 2000
+    mem: 1
 
 bedgraph_to_bigwig:
     time : 1
-    mem : 2000
+    mem : 1
 
 callpeaks_macs2:
     time : 5
@@ -81,40 +80,40 @@ callpeaks_macs2:
 
 differential_binding:
     time: 3
-    mem: 8000
+    mem: 600
 
 diffbind_results_to_narrowpeak:
   time: 2
-  mem: 4000
+  mem: 2
 
 map_to_windows:
-    time: 3
-    mem: 4000
+    time: 20
+    mem: 300
 
 join_window_counts:
     time: 5
-    mem: 4000
+    mem: 100
 
 plot_scatter_plots:
     time : 30
-    mem : 18000
+    mem : 4000
 
 compute_matrix:
     time : 20
     n : 1
-    mem : 2000
+    mem : 400
 
 plot_figures:
-    time : 90
-    mem : 16000
+    time : 30
+    mem : 6000
 
 summarise_db_results:
-    time: 15
-    mem : 6000
+    time: 2
+    mem : 10
 
 gene_ontology:
     time: 2
-    mem: 10000
+    mem: 600
 
 fimo:
     time: 3
@@ -126,10 +125,10 @@ cat_fimo_motifs:
     mem: 2000
 
 get_overlapping_motifs:
-    time: 4
-    mem: 400M
+    time: 2
+    mem: 1
 
 test_motif_enrichment:
-    time: 10
-    mem: 2000
+    time: 2
+    mem: 250
 
