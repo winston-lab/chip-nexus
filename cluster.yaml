@@ -48,7 +48,7 @@ remove_PCR_duplicates:
 
 bam_separate_species:
     time : 3
-    mem : 1
+    mem : 50
 
 crosslink_coverage:
     time : 4
