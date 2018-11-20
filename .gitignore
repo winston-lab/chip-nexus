@@ -18,6 +18,7 @@ snakemake.err
 snakemake.log
 config.yaml
 mogrify.log
+.*.swp
 
 !fastq/.gitkeep
 !logs/.gitkeep

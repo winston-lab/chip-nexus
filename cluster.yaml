@@ -35,7 +35,7 @@ plot_fastqc_summary:
 plot_read_processing:
     time: 1
     n: 1
-    mem: 10
+    mem: 300
 
 align:
     time : 15
@@ -44,7 +44,7 @@ align:
 
 remove_PCR_duplicates:
     time : 10
-    mem : 1000
+    mem : 2000
 
 bam_separate_species:
     time : 3
@@ -52,39 +52,39 @@ bam_separate_species:
 
 crosslink_coverage:
     time : 4
-    mem : 1
+    mem : 75
 
 protection_coverage:
     time : 3
-    mem : 1
+    mem : 75
 
 midpoint_coverage:
     time : 3
-    mem : 1
+    mem : 75
 
 normalize_genome_coverage:
-    time : 3
-    mem : 1
+    time : 4
+    mem : 50
 
 make_stranded_bedgraph:
     time: 3
-    mem: 1
+    mem: 50
 
 bedgraph_to_bigwig:
-    time : 1
-    mem : 1
+    time : 2
+    mem : 2
 
 callpeaks_macs2:
     time : 5
-    mem : 8000
+    mem : 500
 
 differential_binding:
     time: 3
     mem: 600
 
 diffbind_results_to_narrowpeak:
-  time: 2
-  mem: 2
+  time: 3
+  mem: 150
 
 map_to_windows:
     time: 20
@@ -96,7 +96,7 @@ join_window_counts:
 
 plot_scatter_plots:
     time : 30
-    mem : 4000
+    mem : 13000
 
 compute_matrix:
     time : 20
@@ -112,7 +112,7 @@ summarise_db_results:
     mem : 10
 
 gene_ontology:
-    time: 2
+    time: 4
     mem: 600
 
 fimo:
@@ -125,10 +125,10 @@ cat_fimo_motifs:
     mem: 2000
 
 get_overlapping_motifs:
-    time: 2
+    time: 3
     mem: 1
 
 test_motif_enrichment:
-    time: 2
+    time: 3
     mem: 250
 

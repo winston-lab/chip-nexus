@@ -2,7 +2,7 @@
 import os
 import re
 import itertools
-from math import log2
+from math import log2, log10
 
 configfile: "config.yaml"
 
