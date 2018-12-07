@@ -4,7 +4,7 @@ rule clean_reads:
     input:
         lambda wc: SAMPLES[wc.sample]["fastq"]
     output:
-        fastq = temp(expand("fastq/cleaned/{{sample}}_{factor}-chipnexus-noadapter.fastq.gz", factor=FACTOR)),
+        fastq = temp(f"fastq/cleaned/{{sample}}_{FACTOR}-chipnexus-noadapter.fastq.gz"),
         log =  "logs/remove_adapter/remove_adapter-{sample}.log"
     params:
         adapter = config["cutadapt"]["adapter"],

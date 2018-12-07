@@ -81,7 +81,7 @@ rule make_stranded_bedgraph:
 rule bedgraph_to_bigwig:
     input:
         bg = "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bedgraph",
-        fasta = lambda wc: config["spike_in"]["fasta"] if wc.norm=="sicounts" else os.path.abspath(build_annotations(config["genome"]["fasta"]))
+        fasta = lambda wc: os.path.abspath(config["spike_in"]["fasta"]) if wc.norm=="sicounts" else os.path.abspath(build_annotations(config["genome"]["fasta"]))
     output:
         "coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw"
     params:
