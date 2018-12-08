@@ -95,8 +95,14 @@ include: "rules/chip-nexus_motifs.smk"
 onsuccess:
     shell("(./mogrify.sh) > mogrify.log")
 
-localrules:
-    all,
+localrules: all
+
+def statuscheck(dict1, dict2):
+    return(["passing"] if dict1 == dict2 else ["all", "passing"])
+
+def conditioncheck(conditionlist):
+    return(conditionlist if len(conditionlist)==1 else conditionlist.append("all"))
+
 
 rule all:
     input:
@@ -113,16 +119,16 @@ rule all:
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints"]),
         #read processing stats
         f"qual_ctrl/read_processing/{FACTOR}-chipnexus_read-processing-loss.svg",
-        expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=["all","passing"]) if SISAMPLES else [],
+        expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=statuscheck(SISAMPLES, SIPASSING)) if SISAMPLES else [],
         #scatterplots
-        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]),
-        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), status=["all","passing"], factor=FACTOR, windowsize=config["scatterplot_binsizes"]) if SISAMPLES and comparisons_si else [],
+        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditioncheck(conditiongroups), control=conditioncheck(controlgroups)), status=statuscheck(SAMPLES, PASSING), factor=FACTOR, windowsize=config["scatterplot_binsizes"]),
+        expand(expand("qual_ctrl/scatter_plots/{condition}-v-{control}/{{status}}/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-scatterplots-{{status}}-window-{{windowsize}}.svg", zip, condition=conditioncheck(conditiongroups_si), control=conditioncheck(controlgroups_si)), status=statuscheck(SISAMPLES, SIPASSING), factor=FACTOR, windowsize=config["scatterplot_binsizes"]) if SISAMPLES and comparisons_si else [],
         ##categorise peaks
         expand("peakcalling/macs/{group}/{group}_experimental-{factor}-chipnexus_peaks-{category}.narrowpeak", group=GROUPS, factor=FACTOR, category=CATEGORIES),
         #expand(expand("peakcalling/macs/{condition}-v-{control}-{{factor}}-chipnexus-peaknumbers.tsv", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), factor=config["factor"]),
         # datavis
-        expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups+["all"], control=controlgroups+["all"]), figure=FIGURES, factor=FACTOR, status=["all", "passing"]) if config["plot_figures"] else [],
-        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditiongroups_si+["all"], control=controlgroups_si+["all"]), figure=FIGURES, factor=FACTOR, status=["all", "passing"]) if config["plot_figures"] and SISAMPLES and comparisons_si else [],
+        expand(expand("datavis/{{figure}}/libsizenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-libsizenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditioncheck(conditiongroups), control=conditioncheck(controlgroups)), figure=FIGURES, factor=FACTOR, status=statuscheck(SAMPLES, PASSING)) if config["plot_figures"] else [],
+        expand(expand("datavis/{{figure}}/spikenorm/{condition}-v-{control}/{{status}}/{{factor}}-chipnexus_{{figure}}-spikenorm-{{status}}_{condition}-v-{control}_heatmap-bygroup.svg", zip, condition=conditioncheck(conditiongroups_si), control=conditioncheck(controlgroups_si)), figure=FIGURES, factor=FACTOR, status=statuscheck(SISAMPLES, SIPASSING)) if config["plot_figures"] and SISAMPLES and comparisons_si else [],
         #differential binding of peaks
         expand(expand("diff_binding/{condition}-v-{control}/libsizenorm/{condition}-v-{control}_{{factor}}-chipnexus-libsizenorm-qc-plots.svg", zip, condition=conditiongroups, control=controlgroups), factor=FACTOR),
         expand(expand("diff_binding/{condition}-v-{control}/spikenorm/{condition}-v-{control}_{{factor}}-chipnexus-spikenorm-qc-plots.svg", zip, condition=conditiongroups_si, control=controlgroups_si), factor=FACTOR) if comparisons_si else [],
