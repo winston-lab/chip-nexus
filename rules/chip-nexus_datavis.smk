@@ -16,7 +16,7 @@ rule make_stranded_annotations:
 rule compute_matrix:
     input:
         annotation = lambda wc: FIGURES[wc.figure]["annotations"][wc.annotation]["path"] if wc.strand=="protection" else "datavis/{figure}/{annotation}.bed".format(**wc),
-        bw = "coverage/{norm}/{sample}_" + FACTOR + "-chipnexus-{norm}-{strand}.bw"
+        bw = f"coverage/{{norm}}/{{sample}}_{FACTOR}-chipnexus-{{norm}}-{{strand}}.bw"
     output:
         dtfile = temp("datavis/{figure}/{norm}/{annotation}_{sample}-{norm}-{strand}.mat.gz"),
         matrix = temp("datavis/{figure}/{norm}/{annotation}_{sample}-{norm}-{strand}.tsv"),

@@ -442,14 +442,20 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
         filter(strand=="protection") %>%
         mutate(replicate = fct_inorder(paste("replicate", replicate), ordered=TRUE),
                cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
-    sample_cutoff = df_sample %>% pull(cpm) %>% quantile(probs=pct_cutoff, na.rm=TRUE)
+    sample_cutoff = df_sample %>%
+        filter(cpm > 0) %>%
+        pull(cpm) %>%
+        quantile(probs=pct_cutoff, na.rm=TRUE)
 
     df_group = df %>%
         filter(strand=="protection") %>%
         group_by(group, annotation, position, cluster, new_index, strand) %>%
         summarise(cpm = mean(cpm)) %>% ungroup() %>%
         mutate(cluster = fct_inorder(paste("cluster", cluster), ordered=TRUE))
-    group_cutoff = df_group %>% pull(cpm) %>% quantile(probs=pct_cutoff, na.rm=TRUE)
+    group_cutoff = df_group %>%
+        filter(cpm > 0) %>%
+        pull(cpm) %>%
+        quantile(probs=pct_cutoff, na.rm=TRUE)
 
     # if the sortmethod isn't length, fill missing data with minimum signal
     # (only for heatmaps, don't want to influence metagene values)
