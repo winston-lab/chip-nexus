@@ -37,7 +37,7 @@ main = function(in_table, surv_abs_out, surv_rel_out, loss_out){
         group_by(sample) %>%
         mutate(og_count = lag(count)) %>%
         filter(step != "raw") %>%
-        mutate(loss = (og_count-count)/og_count)
+        mutate(loss = (og_count-count)/og_count*100)
 
     #some hacking to get a survival-curve like thing
     #TODO: make the color fill the AUC?
@@ -54,12 +54,12 @@ main = function(in_table, surv_abs_out, surv_rel_out, loss_out){
                              scalefactor = .01, ylabel = "% of raw reads") +
         ggtitle("read processing summary", subtitle = "relative to library size")
 
-    ggsave(surv_abs_out, plot=surv_abs, width=14, height=2+2.5*nsamples, units="cm")
-    ggsave(surv_rel_out, plot=surv_rel, width=14, height=2+2.5*nsamples, units="cm")
+    ggsave(surv_abs_out, plot=surv_abs, width=16, height=2+2.5*nsamples, units="cm")
+    ggsave(surv_rel_out, plot=surv_rel, width=16, height=2+2.5*nsamples, units="cm")
 
     loss_plot = ggplot(data = loss, aes(x=step, y=0, fill=loss)) +
         geom_raster() +
-        geom_text(aes(label=round(loss, 2)), size=4) +
+        geom_text(aes(label=round(loss, 1)), size=4) +
         scale_fill_viridis(name="% loss", guide=guide_colorbar(barheight = 10, barwidth=1)) +
         scale_color_viridis(guide=FALSE) +
         scale_x_discrete(labels = c("reads cleaned", "aligned",
@@ -79,7 +79,7 @@ main = function(in_table, surv_abs_out, surv_rel_out, loss_out){
               plot.subtitle = element_text(size=12, face="plain"),
               panel.border = element_blank())
 
-    ggsave(loss_out, plot=loss_plot, width=14, height=2+1.5*nsamples, units="cm")
+    ggsave(loss_out, plot=loss_plot, width=16, height=2+1.5*nsamples, units="cm")
 }
 
 main(in_table = snakemake@input[[1]],
