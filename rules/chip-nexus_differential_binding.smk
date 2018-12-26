@@ -67,20 +67,3 @@ rule diffbind_results_to_narrowpeak:
         (python scripts/diffbind_results_to_narrowpeak.py -i {input.condition_coverage} -j {input.control_coverage} -s $median_fragsize -d {input.diffbind_results} -n {output.narrowpeak} -b {output.summit_bed}) &> {log}
         """
 
-rule summarise_db_results:
-    input:
-        total = "diff_binding/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-diffbind-results-all.tsv",
-        genic = "diff_binding/{condition}-v-{control}/genic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-genic.tsv",
-        intragenic = "diff_binding/{condition}-v-{control}/intragenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intragenic.tsv",
-        intergenic = "diff_binding/{condition}-v-{control}/intergenic/{condition}-v-{control}-{factor}-chipnexus-results-{norm}-all-intergenic.tsv",
-    output:
-        summary = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-summary.svg",
-        maplot = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-maplot.svg",
-        volcano = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-volcano.svg",
-        volcano_free = "diff_binding/{condition}-v-{control}/{condition}-v-{control}-{factor}-chipnexus-{norm}-diffbind-volcano-freescale.svg",
-    params:
-        lfc = config["deseq"]["fold-change-threshold"],
-        alpha = config["deseq"]["fdr"]
-    conda: "../envs/tidyverse.yaml"
-    script: "../scripts/plot_diffbind_summary.R"
-
