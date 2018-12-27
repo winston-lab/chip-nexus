@@ -17,9 +17,6 @@ An analysis pipeline for ChIP-nexus data with the following major steps:
 - library size and spike-in normalization of coverage
 - genome-wide scatterplots and correlations
 - differential binding analysis with [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
-- classification of peaks into genomic categories
-- gene ontology analysis of genes with peaks
-- motif enrichment analysis near peaks
 - data visualization (heatmaps and metagenes, with the option to separate data into clusters of similar signal)
 
 ## requirements
@@ -43,17 +40,6 @@ An analysis pipeline for ChIP-nexus data with the following major steps:
     - ORF annotation
     - transcript annotation
     - optional: other annotations for data visualization (i.e. heatmaps and metagenes)
-
-- required only if you want to run gene ontology analyses:
-    - a gene ontology mapping file in a three column, tab delimited format where the columns are common name, systematic name, and GO category:
-
-    |      |             |            |
-    | ---  | ---         | ---        |
-    | ypf1 | SPAC25B8.17 | GO:1990578 |
-    | nhe1 | SPAC977.10  | GO:1990578 |
-
-- required only if you want to run motif enrichment analyses:
-    - motif databases in [MEME](http://meme-suite.org/doc/meme-format.html) format
 
 ## instructions
 **0**. If you haven't already done so, clone the separate ['build-annotations' pipeline](https://github.com/winston-lab/build-annotations), make a copy of the `config_template.yaml` file called `config.yaml`, and edit `config.yaml` as needed so that it points to the experimental genome FASTA file, ORF annotation BED file, transcript annotation BED file, and motif databases to be used for the ChIP-nexus pipeline. The 'build-annotations' pipeline will be used to create annotation files needed for classifying ChIP-nexus peaks into different genomic categories.

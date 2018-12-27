@@ -33,7 +33,7 @@ plot_fastqc_summary:
     mem: 400
 
 plot_read_processing:
-    time: 1
+    time: 2
     n: 1
     mem: 300
 
@@ -52,11 +52,11 @@ bam_separate_species:
 
 crosslink_coverage:
     time : 4
-    mem : 75
+    mem : 90
 
 protection_coverage:
     time : 3
-    mem : 75
+    mem : 90
 
 midpoint_coverage:
     time : 3
@@ -95,7 +95,7 @@ join_window_counts:
     mem: 100
 
 plot_scatter_plots:
-    time : 30
+    time : 40
     mem : 13000
 
 compute_matrix:
@@ -106,29 +106,4 @@ compute_matrix:
 plot_figures:
     time : 30
     mem : 6000
-
-summarise_db_results:
-    time: 2
-    mem : 10
-
-gene_ontology:
-    time: 4
-    mem: 600
-
-fimo:
-    time: 3
-    mem: 400M
-
-cat_fimo_motifs:
-    time: 30
-    n: 4
-    mem: 2000
-
-get_overlapping_motifs:
-    time: 3
-    mem: 1
-
-test_motif_enrichment:
-    time: 3
-    mem: 250
 

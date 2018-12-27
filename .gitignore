@@ -4,10 +4,7 @@ Rplots.pdf
 alignment/
 coverage/
 datavis/
-ratios/
 diff_binding/
-gene_ontology/
-motifs/
 peakcalling/
 qual_ctrl/
 fastq/*
@@ -19,6 +16,7 @@ snakemake.log
 config.yaml
 mogrify.log
 .*.swp
+.*.bam
 
 !fastq/.gitkeep
 !logs/.gitkeep
