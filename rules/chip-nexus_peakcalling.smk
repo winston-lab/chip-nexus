@@ -61,7 +61,7 @@ rule combine_peaks:
         cond = "peakcalling/{condition}/{condition}_{species}-{factor}-chipnexus-idrpeaks.narrowPeak",
         ctrl = "peakcalling/{control}/{control}_{species}-{factor}-chipnexus-idrpeaks.narrowPeak",
     output:
-        "diff_binding/{condition}-v-{control}/{condition}-v-{control}_{species}-{factor}-peaks.bed"
+        "diff_binding/peaks/{condition}-v-{control}/{condition}-v-{control}_{species}-{factor}-peaks.bed"
     log:
         "logs/combine_peaks/combine_peaks-{condition}-v-{control}-{species}-{factor}.log"
     shell: """
