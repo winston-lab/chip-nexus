@@ -55,10 +55,14 @@ rule align:
     params:
         idx_path = config["bowtie2"]["index-path"],
         minmapq = config["bowtie2"]["minmapq"]
-    conda: "../envs/bowtie2.yaml"
-    threads : config["threads"]
+    conda:
+        "../envs/bowtie2.yaml"
+    threads:
+        config["threads"]
     shell: """
-        (bowtie2 -x {params.idx_path}/{basename} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | samtools view -buh -q {params.minmapq} - | samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
+        (bowtie2 -x {params.idx_path}/{basename} -U {input.fastq} --un-gz {output.unaligned_fastq} -p {threads} | \
+         samtools view -buh -q {params.minmapq} - | \
+         samtools sort -T .{wildcards.sample} -@ {threads} -o {output.bam} -) &> {output.log}
         """
 
 rule remove_PCR_duplicates:
@@ -66,7 +70,8 @@ rule remove_PCR_duplicates:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-uniquemappers.bam"
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam"
-    log: "logs/remove_PCR_duplicates/remove_PCR_duplicates-{sample}.log"
+    log:
+        "logs/remove_PCR_duplicates/remove_PCR_duplicates-{sample}.log"
     shell: """
         (python scripts/removePCRdupsFromBAM.py {input} {output}) &> {log}
         """
@@ -77,7 +82,8 @@ rule index_bam:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam"
     output:
         f"alignment/{{sample}}_{FACTOR}-chipnexus-noPCRduplicates.bam.bai"
-    log : "logs/index_bam/index_bam-{sample}.log"
+    log:
+        "logs/index_bam/index_bam-{sample}.log"
     shell: """
         (samtools index {input}) &> {log}
         """
@@ -93,9 +99,16 @@ rule bam_separate_species:
     params:
         filterprefix = lambda wc: config["spike_in"]["name"] if wc.species=="experimental" else config["genome"]["name"],
         prefix = lambda wc: config["genome"]["name"] if wc.species=="experimental" else config["spike_in"]["name"]
-    threads: config["threads"]
-    log: "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
+    threads:
+        config["threads"]
+    log:
+        "logs/bam_separate_species/bam_separate_species-{sample}-{species}.log"
     shell: """
-        (samtools view -h {input.bam} $(faidx {input.fasta} -i chromsizes | grep {params.prefix}_ | awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | grep -v -e 'SN:{params.filterprefix}_' | sed 's/{params.prefix}_//g' | samtools view -bh -@ {threads} -o {output} -) &> {log}
+        (samtools view -h {input.bam} $(faidx {input.fasta} -i chromsizes | \
+                grep {params.prefix}_ | \
+                awk 'BEGIN{{FS="\t"; ORS=" "}}{{print $1}}') | \
+         grep -v -e 'SN:{params.filterprefix}_' | \
+         sed 's/{params.prefix}_//g' | \
+         samtools view -bh -@ {threads} -o {output} -) &> {log}
         """
 

@@ -104,8 +104,8 @@ rule all:
         f'qual_ctrl/fastqc/{FACTOR}-chipnexus-per_base_sequence_content.svg',
         #alignment
         expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam", sample=SAMPLES, factor=FACTOR),
-        #macs2
-        expand("peakcalling/macs/{group}/{group}_{species}-{factor}-chipnexus_peaks.narrowPeak", group=GROUPS, species=["experimental", "spikein"], factor=FACTOR),
+        #peakcalling
+        expand("peakcalling/{group}/{group}_{species}-{factor}-chipnexus-idrpeaks.narrowPeak", group=GROUPS, species=["experimental", "spikein"], factor=FACTOR),
         #coverage
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=FACTOR, norm=["counts","libsizenorm"], strand=["plus","minus","protection","midpoints"]),
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints"]),
