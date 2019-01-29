@@ -78,6 +78,10 @@ callpeaks_macs2:
     time : 5
     mem : 500
 
+idr:
+    time: 5
+    mem: 400
+
 differential_binding:
     time: 3
     mem: 600
