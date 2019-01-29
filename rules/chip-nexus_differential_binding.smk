@@ -52,7 +52,7 @@ rule differential_binding:
     conda:
         "../envs/diff_bind.yaml"
     script:
-        "../scripts/call_diffbind_peaks.R"
+        "../scripts/differential_binding.R"
 
 #NOTE: coverage is smoothed using a Gaussian with bandwidth equal to the median
 # fragment size across all passing samples as determined by MACS2 cross-correlation before
