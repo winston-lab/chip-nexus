@@ -4,5 +4,6 @@ channels:
     - conda-forge
 dependencies:
     - macs2=2.1.2
+    - pyfaidx=0.5.5.2=py_0
     - sed=4.4
 
