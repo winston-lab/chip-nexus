@@ -35,7 +35,7 @@ rule combine_annotation_counts:
 rule differential_binding:
     input:
         exp_counts = "diff_binding/{annotation}/{condition}-v-{control}/{condition}-v-{control}_allsamples-experimental-{factor}-chipnexus-counts-{annotation}.tsv.gz",
-        spike_counts = lambda wc: [] if wc.norm=="libsizenorm" else "diff_binding/{annotation}/{condition}-v-{control}/{condition}-v-{control}_allsamples-spikein-{factor}-chipnexus-counts-{annotation}.tsv.gz".format(**wc)
+        spike_counts = lambda wc: [] if wc.norm=="libsizenorm" else "diff_binding/peaks/{condition}-v-{control}/{condition}-v-{control}_allsamples-spikein-{factor}-chipnexus-counts-peaks.tsv.gz".format(**wc)
     output:
         results_all = "diff_binding/{annotation}/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-{annotation}-diffbind-results-all.tsv",
         results_up = "diff_binding/{annotation}/{condition}-v-{control}/{norm}/{condition}-v-{control}_{factor}-chipnexus-{norm}-{annotation}-diffbind-results-up.tsv",
