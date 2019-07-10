@@ -26,8 +26,8 @@ rule callpeaks_macs2:
                 awk '{{sum += $2}} END {{print sum}}') \
          --keep-dup all --bdg -n peakcalling/sample_peaks/{wildcards.sample}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} --llocal {params.llocal} --call-summits -q 1) &> {log}
         (Rscript {output.script}) &>> {log}
-        (sed -i -e 's/peakcalling\/sample_peaks\/{wildcards.sample}\///g' {output.peaks}) &>> {log}
-        (sed -i -e 's/peakcalling\/sample_peaks\/{wildcards.sample}\///g' {output.summits}) &>> {log}
+        (sed -i -e 's/peakcalling\/sample_peaks\///g' {output.peaks}) &>> {log}
+        (sed -i -e 's/peakcalling\/sample_peaks\///g' {output.summits}) &>> {log}
         """
 
 rule idr:

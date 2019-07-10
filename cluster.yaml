@@ -88,7 +88,7 @@ differential_binding:
 
 diffbind_results_to_narrowpeak:
   time: 3
-  mem: 150
+  mem: 200
 
 map_to_windows:
     time: 20
