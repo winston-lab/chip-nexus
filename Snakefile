@@ -2,7 +2,6 @@
 import os
 import re
 import itertools
-import collections
 from math import log2, log10
 
 configfile: "config.yaml"
@@ -18,22 +17,24 @@ SAMPLES = config["samples"]
 SISAMPLES = {k:v for k,v in SAMPLES.items() if v["spikein"]}
 PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"]}
 SIPASSING = {k:v for k,v in PASSING.items() if v["spikein"]}
-GROUPS = [x for x,n in collections.Counter(v["group"] for k,v in PASSING.items()).items() if n > 1]
-SIGROUPS = [x for x,n in collections.Counter(v["group"] for k,v in SIPASSING.items()).items() if n > 1]
 
-controlgroups = list(itertools.chain(*[d.values() for d in config["comparisons"]["libsizenorm"]]))
-conditiongroups = list(itertools.chain(*[d.keys() for d in config["comparisons"]["libsizenorm"]]))
+#groups which have at least two passing samples, so that they are valid for peakcalling and diff exp
+validgroups = set(z for z in [PASSING[x]['group'] for x in PASSING] if [PASSING[x]['group'] for x in PASSING].count(z)>=2)
+validgroups_si = set(z for z in [PASSING[x]['group'] for x in PASSING if PASSING[x]['spikein']] if [PASSING[x]['group'] for x in PASSING].count(z)>=2)
+
+controlgroups = list(itertools.chain(*[d.values() for d in config["comparisons"]["libsizenorm"] if list(d.keys())[0] and list(d.values())[0] in validgroups]))
+conditiongroups = list(itertools.chain(*[d.keys() for d in config["comparisons"]["libsizenorm"] if list(d.keys())[0] and list(d.values())[0] in validgroups]))
 
 comparisons_si = config["comparisons"]["spikenorm"]
 if comparisons_si:
-    controlgroups_si = list(itertools.chain(*[d.values() for d in config["comparisons"]["spikenorm"]]))
-    conditiongroups_si = list(itertools.chain(*[d.keys() for d in config["comparisons"]["spikenorm"]]))
+    controlgroups_si = list(itertools.chain(*[d.values() for d in config["comparisons"]["spikenorm"] if list(d.keys())[0] and list(d.values())[0] in validgroups_si]))
+    conditiongroups_si = list(itertools.chain(*[d.keys() for d in config["comparisons"]["spikenorm"] if list(d.keys())[0] and list(d.values())[0] in validgroups_si]))
 
 FIGURES = config["figures"]
 
 wildcard_constraints:
     sample = "|".join(re.escape(x) for x in list(SAMPLES.keys())),
-    group = "|".join(re.escape(x) for x in GROUPS),
+    group = "|".join(re.escape(x) for x in validgroups),
     control = "|".join(set(re.escape(x) for x in controlgroups + (controlgroups_si if comparisons_si else []) + ["all"])),
     condition = "|".join(set(re.escape(x) for x in conditiongroups + (conditiongroups_si if comparisons_si else []) + ["all"])),
     species = "experimental|spikein",
@@ -96,7 +97,7 @@ def statuscheck(dict1, dict2):
     return(["passing"] if dict1 == dict2 else ["all", "passing"])
 
 def conditioncheck(conditionlist):
-    return(conditionlist if len(conditionlist)==1 else conditionlist + ["all"])
+    return(conditionlist if len(conditionlist)<=1 else conditionlist + ["all"])
 
 rule all:
     input:
@@ -107,9 +108,10 @@ rule all:
         #alignment
         expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam", sample=SAMPLES, factor=FACTOR),
         #peakcalling
-        expand("peakcalling/sample_peaks/{sample}_{species}-{factor}-chipnexus_peaks.narrowPeak", sample=PASSING, factor=FACTOR, species=["experimental", "spikein"]),
-        expand("peakcalling/{group}/{group}_experimental-{factor}-chipnexus-idrpeaks.narrowPeak", group=GROUPS, factor=FACTOR),
-        expand("peakcalling/{group}/{group}_spikein-{factor}-chipnexus-idrpeaks.narrowPeak", group=SIGROUPS, factor=FACTOR) if comparisons_si else [],
+        expand("peakcalling/sample_peaks/{sample}_experimental-{factor}-chipnexus_peaks.narrowPeak", sample=PASSING, factor=FACTOR),
+        expand("peakcalling/sample_peaks/{sample}_spikein-{factor}-chipnexus_peaks.narrowPeak", sample=SIPASSING, factor=FACTOR),
+        expand("peakcalling/{group}/{group}_experimental-{factor}-chipnexus-idrpeaks.narrowPeak", group=validgroups, factor=FACTOR),
+        expand("peakcalling/{group}/{group}_spikein-{factor}-chipnexus-idrpeaks.narrowPeak", group=validgroups_si, factor=FACTOR),
         #coverage
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=FACTOR, norm=["counts","libsizenorm"], strand=["plus","minus","protection","midpoints"]),
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints"]),
