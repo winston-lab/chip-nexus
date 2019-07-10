@@ -2,6 +2,7 @@
 import os
 import re
 import itertools
+import collections
 from math import log2, log10
 
 configfile: "config.yaml"
@@ -17,7 +18,8 @@ SAMPLES = config["samples"]
 SISAMPLES = {k:v for k,v in SAMPLES.items() if v["spikein"]}
 PASSING = {k:v for k,v in SAMPLES.items() if v["pass-qc"]}
 SIPASSING = {k:v for k,v in PASSING.items() if v["spikein"]}
-GROUPS = set(v["group"] for (k,v) in SAMPLES.items())
+GROUPS = [x for x,n in collections.Counter(v["group"] for k,v in PASSING.items()).items() if n > 1]
+SIGROUPS = [x for x,n in collections.Counter(v["group"] for k,v in SIPASSING.items()).items() if n > 1]
 
 controlgroups = list(itertools.chain(*[d.values() for d in config["comparisons"]["libsizenorm"]]))
 conditiongroups = list(itertools.chain(*[d.keys() for d in config["comparisons"]["libsizenorm"]]))
@@ -105,7 +107,9 @@ rule all:
         #alignment
         expand("alignment/{sample}_{factor}-chipnexus-noPCRduplicates.bam", sample=SAMPLES, factor=FACTOR),
         #peakcalling
-        expand("peakcalling/{group}/{group}_{species}-{factor}-chipnexus-idrpeaks.narrowPeak", group=GROUPS, species=["experimental", "spikein"], factor=FACTOR),
+        expand("peakcalling/sample_peaks/{sample}_{species}-{factor}-chipnexus_peaks.narrowPeak", sample=PASSING, factor=FACTOR, species=["experimental", "spikein"]),
+        expand("peakcalling/{group}/{group}_experimental-{factor}-chipnexus-idrpeaks.narrowPeak", group=GROUPS, factor=FACTOR),
+        expand("peakcalling/{group}/{group}_spikein-{factor}-chipnexus-idrpeaks.narrowPeak", group=SIGROUPS, factor=FACTOR) if comparisons_si else [],
         #coverage
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=FACTOR, norm=["counts","libsizenorm"], strand=["plus","minus","protection","midpoints"]),
         expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints"]),
