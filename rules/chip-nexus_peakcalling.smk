@@ -18,6 +18,8 @@ rule callpeaks_macs2:
     params:
         bw = config["peakcalling"]["bandwidth"],
         llocal = config["peakcalling"]["l_local"],
+        mfold_low = config["peakcalling"]["mfold_low"],
+        mfold_high = config["peakcalling"]["mfold_high"],
     conda:
         "../envs/macs2.yaml"
     log:
@@ -25,7 +27,7 @@ rule callpeaks_macs2:
     shell: """
         (macs2 callpeak -t {input.bam} -f BAM -g $(faidx {input.fasta} -i chromsizes | \
                 awk '{{sum += $2}} END {{print sum}}') \
-         --keep-dup all --bdg -n peakcalling/sample_peaks/{wildcards.sample}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} --llocal {params.llocal} --call-summits -q 1) &> {log}
+         --keep-dup all --bdg -n peakcalling/sample_peaks/{wildcards.sample}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} --mfold {params.mfold_low} {params.mfold_high} --llocal {params.llocal} --call-summits -q 1) &> {log}
         (Rscript {output.script}) &>> {log}
         (sed -i -e 's/peakcalling\/sample_peaks\///g' {output.peaks}) &>> {log}
         (sed -i -e 's/peakcalling\/sample_peaks\///g' {output.summits}) &>> {log}

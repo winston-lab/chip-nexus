@@ -121,6 +121,8 @@ bowtie2:
 peakcalling:
     bandwidth: 160  # [INT] bandwidth for model building: set as sonication fragment size
     l_local: 1000  # [INT] size, in bp, of large region for calculating local lambda
+    mfold_low: 5
+    mfold_high: 50
     idr: 0.1  # [FLOAT in (0,1)] irreproducible discovery rate cutoff
 
 # DESeq2 differential binding settings
