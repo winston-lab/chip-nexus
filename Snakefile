@@ -115,8 +115,8 @@ rule all:
         expand("peakcalling/{group}/{group}_experimental-{factor}-chipnexus-idrpeaks.narrowPeak", group=validgroups, factor=FACTOR),
         expand("peakcalling/{group}/{group}_spikein-{factor}-chipnexus-idrpeaks.narrowPeak", group=validgroups_si, factor=FACTOR),
         #coverage
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=FACTOR, norm=["counts","libsizenorm"], strand=["plus","minus","protection","midpoints"]),
-        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SAMPLES, factor=FACTOR, norm=["counts","libsizenorm"], strand=["plus","minus","protection","midpoints", "SENSE", "ANTISENSE"]),
+        expand("coverage/{norm}/{sample}_{factor}-chipnexus-{norm}-{strand}.bw", sample=SISAMPLES, factor=FACTOR, norm=["sicounts", "spikenorm"], strand=["plus","minus","protection","midpoints", "SENSE", "ANTISENSE"]),
         #read processing stats
         f"qual_ctrl/read_processing/{FACTOR}-chipnexus_read-processing-loss.svg",
         expand("qual_ctrl/spikein/{factor}-chipnexus_spikein-plots-{status}.svg", factor=FACTOR, status=statuscheck(SISAMPLES, SIPASSING)) if SISAMPLES else [],
