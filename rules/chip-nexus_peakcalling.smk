@@ -20,8 +20,8 @@ rule callpeaks_macs2:
         build_model = "" if config["peakcalling"]["build_model"] else "--nomodel",
         mfold_low = config["peakcalling"]["mfold_low"],
         mfold_high = config["peakcalling"]["mfold_high"],
-        shift = config["peakcalling"]["shift"],
-        extsize = config["peakcalling"]["extsize"]
+        shift = config["peakcalling"]["shift"] if not config["peakcalling"]["build_model"] else 0,
+        extsize = config["peakcalling"]["extsize"] if not config["peakcalling"]["build_model"] else 0
     conda:
         "../envs/macs2.yaml"
     log:
