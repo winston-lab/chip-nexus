@@ -20,8 +20,8 @@ rule callpeaks_macs2:
         build_model = "" if config["peakcalling"]["build_model"] else "--nomodel",
         mfold_low = config["peakcalling"]["mfold_low"],
         mfold_high = config["peakcalling"]["mfold_high"],
-        shift = config["peakcalling"]["shift"] if not config["peakcalling"]["build_model"] else 0,
-        extsize = config["peakcalling"]["extsize"] if not config["peakcalling"]["build_model"] else 0
+        shift = "--shift" + str(config["peakcalling"]["shift"]) if not config["peakcalling"]["build_model"] else "",
+        extsize = "--extsize" + str(config["peakcalling"]["extsize"]) if not config["peakcalling"]["build_model"] else ""
     conda:
         "../envs/macs2.yaml"
     log:
@@ -29,7 +29,7 @@ rule callpeaks_macs2:
     shell: """
         (macs2 callpeak -t {input.bam} -f BAM -g $(faidx {input.fasta} -i chromsizes | \
                 awk '{{sum += $2}} END {{print sum}}') \
-         --keep-dup all --bdg -n peakcalling/sample_peaks/{wildcards.sample}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} {params.build_model} --extsize {params.extsize} --shift {params.shift} --mfold {params.mfold_low} {params.mfold_high} --llocal {params.llocal} --call-summits -q 1) &> {log}
+         --keep-dup all --bdg -n peakcalling/sample_peaks/{wildcards.sample}_{wildcards.species}-{wildcards.factor}-chipnexus --SPMR --bw {params.bw} {params.build_model} {params.extsize} {params.shift} --mfold {params.mfold_low} {params.mfold_high} --llocal {params.llocal} --call-summits -q 1) &> {log}
         if [ {params.build_model} = "" ]
         then
           (Rscript {params.script}) &>> {log}
