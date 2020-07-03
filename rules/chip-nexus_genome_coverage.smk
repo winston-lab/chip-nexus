@@ -64,7 +64,7 @@ rule midpoint_coverage:
                 xargs printf "%.*f\n" 0)
         (bedtools unionbedg -i \
                 <(bedtools shift -i {input.plus} -g <(faidx {input.fasta} -i chromsizes) -s $half_median_fragsize | bedtools groupby -g 1,2,3 -c 4 -o sum) \
-                <(bedtools shift -i {input.minus} -g <(faidx {input.fasta} -i chromsizes) -s -$half_median_fragsize) -g <(faidx {input.fasta} -i chromsizes | bedtools groupby -g 1,2,3 -c 4 -o sum) -empty | \
+                <(bedtools shift -i {input.minus} -g <(faidx {input.fasta} -i chromsizes) -s -$half_median_fragsize | bedtools groupby -g 1,2,3 -c 4 -o sum) -g <(faidx {input.fasta} -i chromsizes) -empty | \
          awk 'BEGIN{{FS=OFS="\t"}}{{print $1, $2, $3, $4+$5}}' > {output}) &> {log}
         """
 
