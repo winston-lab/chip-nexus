@@ -533,6 +533,7 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                       sd_sense = winsor.sd(sense, trim=trim_pct),
                       sd_antisense = winsor.sd(antisense, trim=trim_pct),
                       sd_protection = winsor.sd(protection, trim=trim_pct)) %>%
+            drop_na() %>%
             mutate(low_sense = mid_sense-sd_sense,
                    high_sense = mid_sense+sd_sense,
                    low_antisense = mid_antisense-sd_antisense,
@@ -571,7 +572,8 @@ main = function(in_paths, samplelist, anno_paths, ptype, upstream, dnstream, sca
                       high_antisense = quantile(antisense, probs=(1-trim_pct)),
                       mid_protection = median(protection),
                       low_protection = quantile(protection, probs=trim_pct),
-                      high_protection = quantile(protection, probs=(1-trim_pct)))
+                      high_protection = quantile(protection, probs=(1-trim_pct))) %>%
+            drop_na()
 
         metadf_group = df %>%
             group_by(group, annotation, strand, position, cluster) %>%
